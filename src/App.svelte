@@ -162,7 +162,7 @@
 {:else if ui.tab === 'history'}
   <HistoryView />
 {:else}
-  {#if !race.tick && !mockFixture && race.status.sse !== 'live'}
+  {#if import.meta.env.DEV && !race.tick && !mockFixture && race.status.sse !== 'live'}
     <p class="waithint">
       no live race right now —
       <a href="?mock=1&speed=10">▶ replay a synthetic one (mock ×10)</a>
