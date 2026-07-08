@@ -27,6 +27,11 @@
           {#if group.gapToLeader > 0}
             +{prettyTime(group.gapToLeader)}
             {#if i > 0}<span class="gprev">(gap +{prettyTime(group.gapToPrevious)})</span>{/if}
+            {#if race.trends[group.id] === 'up'}
+              <span class="trend up" title="gap to the group ahead is opening">↗</span>
+            {:else if race.trends[group.id] === 'down'}
+              <span class="trend down" title="gap to the group ahead is closing">↘</span>
+            {/if}
           {:else}
             at the front
           {/if}
@@ -73,6 +78,15 @@
   .gprev {
     color: #999;
     font-weight: 400;
+  }
+  .trend {
+    font-weight: 700;
+  }
+  .trend.up {
+    color: #c62828;
+  }
+  .trend.down {
+    color: #2e7d32;
   }
   .chips {
     display: flex;

@@ -30,7 +30,7 @@
   title={tooltip}
   onclick={() => (ui.selectedRider = rider.bib)}
 >
-  {#if ui.showBibs}<span class="bib">{rider.bib}</span>{/if}
+  <span class="bib">{rider.bib}</span>
   <span class="name">{name}</span>
   <span class="gap">{prettyTime(rider.secToFirstRider)}</span>
 </button>

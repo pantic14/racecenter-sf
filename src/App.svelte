@@ -17,6 +17,7 @@
   import ListView from './views/ListView.svelte';
   import ProfileView from './views/ProfileView.svelte';
   import SettingsPanel from './views/SettingsPanel.svelte';
+  import HistoryView from './views/HistoryView.svelte';
   import RiderCard from './views/RiderCard.svelte';
   import Toasts from './views/Toasts.svelte';
 
@@ -132,6 +133,9 @@
   // group history log (feeds the future gap-evolution view)
   const historyKey = $derived(mockFixture ? `mock:${mockFixture}` : (race.stage?.date?.substring(0, 10) ?? ''));
   $effect(() => {
+    race.historyKey = historyKey;
+  });
+  $effect(() => {
     const tick = race.tick;
     if (!tick || !historyKey) return;
     logGroups(historyKey, tick.timeStamp, $state.snapshot(race.groups)).catch(() => {});
@@ -155,6 +159,8 @@
   <SettingsPanel />
 {:else if ui.tab === 'profile'}
   <ProfileView />
+{:else if ui.tab === 'history'}
+  <HistoryView />
 {:else}
   {#if !race.tick && !mockFixture && race.status.sse !== 'live'}
     <p class="waithint">

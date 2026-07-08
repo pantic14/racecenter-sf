@@ -1,6 +1,5 @@
 <script>
   import { settings } from '../lib/state/settings.svelte.js';
-  import { ui } from '../lib/state/ui.svelte.js';
   import { race } from '../lib/state/race.svelte.js';
   import { discovery, discoveryDump } from '../lib/state/discovery.svelte.js';
   import { MARK_COLORS, colorOf } from '../lib/colors.js';
@@ -99,7 +98,6 @@
       my color <input type="color" bind:value={settings.myColor} />
       (the "orange" slot of the palette)
     </label>
-    <label><input type="checkbox" bind:checked={ui.showBibs} /> show bib numbers</label>
   </section>
 
   <section>

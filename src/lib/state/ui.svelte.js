@@ -7,5 +7,4 @@ export const ui = $state({
   selectedTeam: '',
   /** @type {number|null} bib whose color card is open */
   selectedRider: null,
-  showBibs: false,
 });

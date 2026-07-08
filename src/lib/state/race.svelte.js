@@ -1,7 +1,10 @@
 // @ts-check
 import { groupRiders } from '../domain/grouping.js';
 import { trackGroups } from '../domain/groupTracking.js';
+import { createTrendTracker } from '../domain/trends.js';
 import { settings } from './settings.svelte.js';
+
+const trendTracker = createTrendTracker();
 
 /**
  * Central race state. Everything (live SSE, mock replay, future full replay)
@@ -31,6 +34,10 @@ export const race = $state({
   frozenGroups: [],
   /** bumped when the route changes; the points themselves stay non-reactive */
   routeVersion: 0,
+  /** @type {Record<string, 'up'|'down'|null>} gap trend per group id (~30 s window) */
+  trends: {},
+  /** IndexedDB key for this session's group history ('yyyy-mm-dd' or 'mock:…') */
+  historyKey: '',
 });
 
 /** @type {import('../domain/route.js').RoutePoint[]|null} */
@@ -54,6 +61,7 @@ export function getRoute() {
 export function applyTick(tick) {
   race.tick = tick;
   race.groups = trackGroups(race.groups, groupRiders(tick.riders, settings.minGap));
+  race.trends = trendTracker.update(race.groups, tick.timeStamp);
   race.status.lastTickAt = Date.now();
 }
 
