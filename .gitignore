@@ -3,3 +3,4 @@ legacy/
 node_modules/
 dist/
 public/fixtures/*.json
+racecenter-peloton.zip

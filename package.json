@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "fixtures": "node fixtures/generate-synthetic.mjs"
+    "fixtures": "node fixtures/generate-synthetic.mjs",
+    "icons": "node tools/generate-icons.mjs",
+    "zip": "npm run build && python3 -c \"import shutil; shutil.rmtree('dist/fixtures', ignore_errors=True); shutil.make_archive('racecenter-peloton', 'zip', 'dist')\""
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.2.0",

@@ -1,10 +1,18 @@
 <script>
   import { onMount } from 'svelte';
   import { race, applyTick, setSseStatus, pushError } from './lib/state/race.svelte.js';
+  import { settings, settingsMeta, initSettings, persistSettings } from './lib/state/settings.svelte.js';
+  import { ui } from './lib/state/ui.svelte.js';
   import { createLiveSource } from './lib/data/sse.js';
   import { fetchRiders, fetchTeams, fetchStages } from './lib/data/api.js';
   import { BASE_URL, TELEMETRY_BIND } from './lib/config.js';
   import { loadMockEventSource } from './lib/data/mock.js';
+  import { logGroups } from './lib/storage/tickLog.js';
+  import { beep } from './lib/alerts/sound.js';
+  import Toolbar from './views/Toolbar.svelte';
+  import ListView from './views/ListView.svelte';
+  import SettingsPanel from './views/SettingsPanel.svelte';
+  import RiderCard from './views/RiderCard.svelte';
 
   const params = new URLSearchParams(location.search);
   const mockParam = params.get('mock');
@@ -14,6 +22,8 @@
   onMount(() => {
     let source;
     (async () => {
+      await initSettings();
+
       // REST loads in parallel; a failure is surfaced in the UI, never blocks the rest
       const [ridersRes, teamsRes, stagesRes] = await Promise.allSettled([
         fetchRiders(),
@@ -46,83 +56,89 @@
     return () => source?.close();
   });
 
-  const firstRiders = $derived(race.tick ? race.tick.riders.slice(0, 10) : []);
+  // persist settings on any deep change (debounced in storage layer)
+  $effect(() => {
+    const snapshot = $state.snapshot(settings);
+    if (settingsMeta.loaded) persistSettings(snapshot);
+  });
 
-  function riderName(bib) {
-    const r = race.riders[bib];
-    return r ? `${r.lastnameshort ?? r.lastname} ${r.firstname ?? ''}` : `#${bib}`;
-  }
+  // slow-rider beep
+  $effect(() => {
+    const tick = race.tick;
+    if (!tick || !settings.soundOn) return;
+    const anySlow = tick.riders.some(
+      (r) => r.kph < settings.maxSlowSpeed && (settings.beepForAll || settings.marks[r.bib]),
+    );
+    if (anySlow) beep(240, 60);
+  });
 
-  function fmtGap(s) {
-    const m = Math.floor(s / 60);
-    return `${m}:${String(Math.round(s - m * 60)).padStart(2, '0')}`;
-  }
+  // group history log (feeds the future gap-evolution view)
+  const historyKey = $derived(mockFixture ? `mock:${mockFixture}` : (race.stage?.date?.substring(0, 10) ?? ''));
+  $effect(() => {
+    const tick = race.tick;
+    if (!tick || !historyKey) return;
+    logGroups(historyKey, tick.timeStamp, $state.snapshot(race.groups)).catch(() => {});
+  });
 </script>
 
-<main>
-  <h1>Racecenter Peloton <small>M0 debug</small></h1>
+<Toolbar />
 
-  {#if mockFixture}
-    <span class="badge mock">MOCK {mockFixture} ×{speed}</span>
-  {/if}
-  <span class="badge {race.status.sse}">{race.status.sse}</span>
+{#if mockFixture}
+  <div class="mockbar">
+    <span class="badge">MOCK {mockFixture} ×{speed}</span>
+    <a href="index.html">← back to live mode</a>
+  </div>
+{/if}
 
-  {#each race.status.errors as err}
-    <p class="error">[{err.source}] {err.message}</p>
-  {/each}
+{#each race.status.errors as err}
+  <p class="error">[{err.source}] {err.message}</p>
+{/each}
 
-  <p>
-    riders: <b>{Object.keys(race.riders).length}</b> ·
-    teams: <b>{race.teams.length}</b> ·
-    stage: <b>{race.stage ? `${race.stage.name} (${race.stage.length} km)` : '—'}</b>
-  </p>
-
-  {#if race.tick}
-    <p>
-      tick @ {new Date(race.tick.timeStamp * 1000).toLocaleTimeString()} ·
-      {race.tick.riders.length} riders in feed ·
-      head of race: <b>{race.tick.riders[0]?.kmToFinish?.toFixed(2)} km to go</b>
+{#if ui.tab === 'settings'}
+  <SettingsPanel />
+{:else}
+  {#if !race.tick && !mockFixture && race.status.sse !== 'live'}
+    <p class="waithint">
+      no live race right now —
+      <a href="?mock=1&speed=10">▶ replay a synthetic one (mock ×10)</a>
     </p>
-    <table>
-      <thead><tr><th>bib</th><th>rider</th><th>gap</th><th>km to go</th><th>km/h</th></tr></thead>
-      <tbody>
-        {#each firstRiders as r (r.bib)}
-          <tr>
-            <td>{r.bib}</td>
-            <td>{riderName(r.bib)}</td>
-            <td>{fmtGap(r.secToFirstRider)}</td>
-            <td>{r.kmToFinish?.toFixed(2)}</td>
-            <td>{r.kph?.toFixed(1)}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  {:else}
-    <p>waiting for first tick… (outside race hours the stream is silent → "stale")</p>
   {/if}
-</main>
+  <ListView />
+{/if}
+
+<RiderCard />
 
 <style>
-  main {
-    font-family: system-ui, sans-serif;
-    padding: 1rem;
-    max-width: 720px;
+  :global(body) {
+    margin: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #fafaf8;
+    color: #222;
+  }
+  .mockbar {
+    background: #ede7f6;
+    padding: 4px 10px;
+    font-size: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
   }
   .badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 10px;
-    font-size: 0.8rem;
+    background: #6a1b9a;
     color: #fff;
-    background: #888;
-    margin-right: 6px;
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 11px;
   }
-  .badge.live { background: #2e7d32; }
-  .badge.stale { background: #b26a00; }
-  .badge.reconnecting, .badge.connecting { background: #c62828; }
-  .badge.mock { background: #6a1b9a; }
-  .error { color: #c62828; }
-  table { border-collapse: collapse; margin-top: 0.5rem; }
-  th, td { border: 1px solid #ccc; padding: 2px 8px; text-align: right; }
-  td:nth-child(2), th:nth-child(2) { text-align: left; }
+  .error {
+    color: #c62828;
+    padding: 2px 10px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .waithint {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #666;
+  }
 </style>
