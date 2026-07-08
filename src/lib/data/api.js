@@ -54,7 +54,11 @@ export async function fetchStages() {
 
 /** @param {string} url absolute or site-relative profile CSV url */
 export async function fetchProfileCsv(url) {
-  const full = url.startsWith('http') ? url : BASE_URL + url;
+  // Strip the racecenter origin so dev fetches go through the Vite proxy: the CSV
+  // host sends no CORS headers, so an absolute cross-origin fetch is blocked in dev.
+  // BASE_URL re-adds the absolute origin in the built extension (host_permissions).
+  const path = url.replace(/^https?:\/\/racecenter\.letour\.fr/i, '');
+  const full = path.startsWith('http') ? path : BASE_URL + path;
   const res = await fetch(full);
   if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
   return res.text();

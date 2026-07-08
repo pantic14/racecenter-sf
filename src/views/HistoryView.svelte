@@ -1,4 +1,5 @@
 <script>
+  import { untrack } from 'svelte';
   import { race } from '../lib/state/race.svelte.js';
   import { getStageHistory, clearStage } from '../lib/storage/tickLog.js';
   import { prettyTime } from '../lib/util.js';
@@ -49,8 +50,13 @@
   $effect(() => {
     const tick = race.tick;
     if (!tick || loadedKey !== race.historyKey) return;
-    addRow(tick.timeStamp, race.groups);
-    chartVersion++;
+    // untrack the write: `chartVersion++` reads-then-writes chartVersion, which
+    // would make this effect depend on the state it mutates → infinite loop.
+    // Re-running is driven by race.tick changing (a new tick per second).
+    untrack(() => {
+      addRow(tick.timeStamp, race.groups);
+      chartVersion++;
+    });
   });
 
   async function clearHistory() {
