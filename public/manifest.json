@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Racecenter Peloton",
+  "description": "Live Tour de France peloton tracker: rider groups, marking, stage profile and alerts.",
+  "version": "0.1.0",
+  "action": { "default_title": "Open Racecenter Peloton" },
+  "background": { "service_worker": "background.js" },
+  "host_permissions": ["https://racecenter.letour.fr/*"],
+  "permissions": ["storage", "unlimitedStorage"]
+}

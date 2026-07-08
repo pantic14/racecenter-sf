@@ -1,0 +1,5 @@
+doc/
+legacy/
+node_modules/
+dist/
+public/fixtures/*.json
