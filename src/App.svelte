@@ -10,12 +10,15 @@
   import { loadMockEventSource } from './lib/data/mock.js';
   import { parseRouteCsv } from './lib/domain/route.js';
   import { logGroups } from './lib/storage/tickLog.js';
-  import { beep } from './lib/alerts/sound.js';
+  import { beep, playPattern, PATTERNS } from './lib/alerts/sound.js';
+  import { createAlertEngine } from './lib/alerts/engine.js';
+  import { pushAlert } from './lib/state/alerts.svelte.js';
   import Toolbar from './views/Toolbar.svelte';
   import ListView from './views/ListView.svelte';
   import ProfileView from './views/ProfileView.svelte';
   import SettingsPanel from './views/SettingsPanel.svelte';
   import RiderCard from './views/RiderCard.svelte';
+  import Toasts from './views/Toasts.svelte';
 
   const params = new URLSearchParams(location.search);
   const mockParam = params.get('mock');
@@ -105,6 +108,27 @@
     if (anySlow) beep(240, 60);
   });
 
+  // smart alerts: evaluate every tick over the tracked groups
+  const alertEngine = createAlertEngine();
+  $effect(() => {
+    const tick = race.tick;
+    if (!tick) return;
+    const events = alertEngine.evaluate(
+      race.groups,
+      tick.timeStamp,
+      settings.marks,
+      (bib) => {
+        const r = race.riders[bib];
+        return r ? `${r.lastnameshort ?? r.lastname ?? ''}`.trim() || `#${bib}` : `#${bib}`;
+      },
+      settings.alerts,
+    );
+    for (const event of events) {
+      pushAlert(event);
+      if (settings.soundOn) playPattern(PATTERNS[event.type]);
+    }
+  });
+
   // group history log (feeds the future gap-evolution view)
   const historyKey = $derived(mockFixture ? `mock:${mockFixture}` : (race.stage?.date?.substring(0, 10) ?? ''));
   $effect(() => {
@@ -142,6 +166,7 @@
 {/if}
 
 <RiderCard />
+<Toasts />
 
 <style>
   :global(body) {

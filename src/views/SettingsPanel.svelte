@@ -132,6 +132,27 @@
   </section>
 
   <section>
+    <h3>Alerts</h3>
+    <label>
+      <input type="checkbox" bind:checked={settings.alerts.dropEnabled} />
+      marked rider dropped from their group
+    </label>
+    <label>
+      <input type="checkbox" bind:checked={settings.alerts.gapEnabled} />
+      gap opening/closing by at least
+      <select bind:value={settings.alerts.gapThreshold}>
+        {#each [5, 10, 15, 20] as v}<option value={v}>{v}</option>{/each}
+      </select>
+      s per {settings.alerts.gapWindow}s
+    </label>
+    <label>
+      <input type="checkbox" bind:checked={settings.alerts.breakEnabled} />
+      front of the race changes (break caught, riders joining/dropping)
+    </label>
+    <p class="hint">Alerts show as toasts and each type has its own beep (if sound is on).</p>
+  </section>
+
+  <section>
     <h3>Stage profile</h3>
     <p class="hint">
       Altimetry CSV URL for today's stage ({stageDate || '…'}). To find it: open

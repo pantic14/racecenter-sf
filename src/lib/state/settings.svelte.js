@@ -14,6 +14,15 @@ const defaults = {
   marks: {},
   /** @type {Record<string, string>} stage date -> profile CSV url (discovered per stage) */
   profileUrls: {},
+  /** @type {import('../alerts/engine.js').AlertConfig} */
+  alerts: {
+    dropEnabled: true,
+    dropTicks: 5,
+    gapEnabled: true,
+    gapThreshold: 10,
+    gapWindow: 30,
+    breakEnabled: true,
+  },
 };
 
 export const settings = $state(structuredClone(defaults));
