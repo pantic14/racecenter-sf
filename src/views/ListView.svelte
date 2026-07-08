@@ -36,7 +36,32 @@
             at the front
           {/if}
         </span>
+        {#if Number.isFinite(group.kph)}
+          <span class="gkph">{Math.round(group.kph)} km/h</span>
+        {/if}
         <span class="gkm">{group.kmToFinish.toFixed(1)} km to go</span>
+        {#if group.weather}
+          {#if group.relWind}
+            <span
+              class="gwind {group.relWind.kind}"
+              title="wind {Math.round(group.weather.speed)} km/h from {Math.round(
+                group.weather.direction,
+              )}°, gusts {Math.round(group.weather.gusts)} km/h"
+            >
+              <span
+                class="warrow"
+                style="transform: rotate({group.relWind.toward}deg)">↑</span
+              >
+              {Math.round(group.weather.speed)} km/h {group.relWind.label}
+            </span>
+          {/if}
+          <span class="gtemp">{Math.round(group.weather.temp)}°C</span>
+          {#if group.weather.precip > 0}
+            <span class="grain" title="precipitation, last hour"
+              >☔ {group.weather.precip.toFixed(1)} mm</span
+            >
+          {/if}
+        {/if}
       </header>
       <div class="chips">
         {#each group.riders as rider (rider.bib)}
@@ -87,6 +112,43 @@
   }
   .trend.down {
     color: #2e7d32;
+  }
+  .gkph {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #1565c0;
+  }
+  .gwind {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .warrow {
+    display: inline-block;
+    line-height: 1;
+    font-weight: 700;
+  }
+  .gwind.head {
+    color: #c62828;
+  }
+  .gwind.tail {
+    color: #2e7d32;
+  }
+  .gwind.cross-left,
+  .gwind.cross-right {
+    color: #b8860b;
+  }
+  .gtemp {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #555;
+  }
+  .grain {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #1565c0;
   }
   .chips {
     display: flex;

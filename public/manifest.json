@@ -17,6 +17,9 @@
     }
   },
   "background": { "service_worker": "background.js" },
-  "host_permissions": ["https://racecenter.letour.fr/*"],
+  "host_permissions": [
+    "https://racecenter.letour.fr/*",
+    "https://api.open-meteo.com/*"
+  ],
   "permissions": ["storage", "unlimitedStorage"]
 }

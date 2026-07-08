@@ -8,6 +8,10 @@
  * @property {number} gapToLeader  seconds behind the head of the race
  * @property {number} gapToPrevious  seconds behind the previous group
  * @property {number} kmToFinish  of the group's first rider
+ * @property {number} kph  instantaneous speed, mean of the group's riders (NaN if unknown)
+ * @property {number|null} [heading]  travel bearing in degrees (set during applyTick)
+ * @property {import('../data/weather.js').Weather|null} [weather]  weather at the group's position
+ * @property {import('./wind.js').RelativeWind|null} [relWind]  wind relative to travel
  */
 
 /**
@@ -54,5 +58,23 @@ function buildGroup(riders) {
     gapToLeader: riders[0].secToFirstRider,
     gapToPrevious: 0,
     kmToFinish: riders[0].kmToFinish,
+    kph: meanKph(riders),
   };
+}
+
+/**
+ * Mean instantaneous speed of the riders reporting a valid kph.
+ * @param {import('../data/tick.js').RiderTick[]} riders
+ * @returns {number} NaN when no rider reports a usable speed
+ */
+function meanKph(riders) {
+  let sum = 0;
+  let n = 0;
+  for (const r of riders) {
+    if (Number.isFinite(r.kph) && r.kph > 0) {
+      sum += r.kph;
+      n++;
+    }
+  }
+  return n > 0 ? sum / n : NaN;
 }

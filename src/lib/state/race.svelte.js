@@ -2,9 +2,14 @@
 import { groupRiders } from '../domain/grouping.js';
 import { trackGroups } from '../domain/groupTracking.js';
 import { createTrendTracker } from '../domain/trends.js';
+import { createHeadingTracker } from '../domain/heading.js';
+import { classifyWind } from '../domain/wind.js';
+import { createWeatherCache } from '../data/weather.js';
 import { settings } from './settings.svelte.js';
 
 const trendTracker = createTrendTracker();
+const headingTracker = createHeadingTracker();
+const weatherCache = createWeatherCache();
 
 /**
  * Central race state. Everything (live SSE, mock replay, future full replay)
@@ -65,7 +70,20 @@ export function getRoute() {
 /** @param {import('../data/tick.js').Tick} tick */
 export function applyTick(tick) {
   race.tick = tick;
-  race.groups = trackGroups(race.groups, groupRiders(tick.riders, settings.minGap));
+  const groups = trackGroups(race.groups, groupRiders(tick.riders, settings.minGap));
+  const headings = headingTracker.update(groups, tick.timeStamp);
+  for (const group of groups) {
+    const heading = headings[group.id] ?? null;
+    const lead = group.riders[0];
+    const weather = weatherCache.get(lead?.lat ?? null, lead?.lon ?? null);
+    group.heading = heading;
+    group.weather = weather;
+    group.relWind =
+      weather && heading != null
+        ? classifyWind(weather.direction, heading)
+        : null;
+  }
+  race.groups = groups;
   race.trends = trendTracker.update(race.groups, tick.timeStamp);
   race.status.lastTickAt = Date.now();
 }
