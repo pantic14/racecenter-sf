@@ -10,6 +10,10 @@
  * @property {number|null} lat
  * @property {number|null} lon
  * @property {number|null} alt
+ * @property {number} course   travel heading in degrees (0 = N), NaN if absent
+ * @property {number} windKph  wind speed at the rider, km/h, NaN if absent
+ * @property {number} windDir  absolute wind bearing in degrees, NaN if absent
+ * @property {number} tempC    air temperature at the rider, °C, NaN if absent
  */
 
 /**
@@ -38,6 +42,10 @@ export function normalizeTelemetry(payload) {
       lat: r.Latitude != null ? Number(r.Latitude) : null,
       lon: r.Longitude != null ? Number(r.Longitude) : null,
       alt: r.mAlt != null ? Number(r.mAlt) : null,
+      course: r.Course != null ? Number(r.Course) : NaN,
+      windKph: r.kphWind != null ? Number(r.kphWind) : NaN,
+      windDir: r.RiderWindDir != null ? Number(r.RiderWindDir) : NaN,
+      tempC: r.degC != null ? Number(r.degC) : NaN,
     });
   }
   // since 2026 riders aren't always ordered by gap in the feed

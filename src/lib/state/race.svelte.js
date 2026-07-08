@@ -2,14 +2,12 @@
 import { groupRiders } from '../domain/grouping.js';
 import { trackGroups } from '../domain/groupTracking.js';
 import { createTrendTracker } from '../domain/trends.js';
-import { createHeadingTracker } from '../domain/heading.js';
 import { classifyWind } from '../domain/wind.js';
-import { createWeatherCache } from '../data/weather.js';
 import { settings } from './settings.svelte.js';
 
 const trendTracker = createTrendTracker();
-const headingTracker = createHeadingTracker();
-const weatherCache = createWeatherCache();
+// Wind, heading and temperature all come from the live feed (Course, RiderWindDir,
+// kphWind, degC) — no external weather API.
 
 /**
  * Central race state. Everything (live SSE, mock replay, future full replay)
@@ -71,16 +69,13 @@ export function getRoute() {
 export function applyTick(tick) {
   race.tick = tick;
   const groups = trackGroups(race.groups, groupRiders(tick.riders, settings.minGap));
-  const headings = headingTracker.update(groups, tick.timeStamp);
   for (const group of groups) {
-    const heading = headings[group.id] ?? null;
     const lead = group.riders[0];
-    const weather = weatherCache.get(lead?.lat ?? null, lead?.lon ?? null);
-    group.heading = heading;
-    group.weather = weather;
+    group.tempC = Number.isFinite(lead?.tempC) ? lead.tempC : null;
+    group.windKph = Number.isFinite(lead?.windKph) ? lead.windKph : null;
     group.relWind =
-      weather && heading != null
-        ? classifyWind(weather.direction, heading)
+      lead && Number.isFinite(lead.windDir) && Number.isFinite(lead.course)
+        ? classifyWind(lead.windDir, lead.course)
         : null;
   }
   race.groups = groups;

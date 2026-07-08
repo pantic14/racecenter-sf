@@ -3,10 +3,34 @@
 /**
  * @typedef {Object} RelativeWind
  * @property {number} relAngle  0..360, where the wind comes FROM relative to travel (0 = dead ahead)
- * @property {number} toward    0..360, direction the wind pushes relative to travel (0 = forward), for a ↑ arrow rotation
- * @property {'head'|'tail'|'cross-left'|'cross-right'} kind
- * @property {string} label     short human label
+ * @property {number} arrowDeg  rotation (deg, clockwise) for a "↑" glyph (up = ahead) so it points where
+ *                              the wind PUSHES (downwind) — matches letour's arrow: tailwind → ↑, headwind → ↓.
+ * @property {'head'|'tail'|'cross-left'|'cross-right'} kind  color family (head/tail/cross)
+ * @property {string} label     8-way human label describing where the wind comes from
  */
+
+// 8 sectors of 45°, centred on relAngle 0,45,…,315 (where the wind comes FROM).
+const LABELS = [
+  'headwind',   // 0    from dead ahead
+  'head-right', // 45   from ahead-right
+  'cross R',    // 90   from the right
+  'tail-right', // 135  from behind-right
+  'tailwind',   // 180  from dead behind
+  'tail-left',  // 225  from behind-left
+  'cross L',    // 270  from the left
+  'head-left',  // 315  from ahead-left
+];
+/** @type {RelativeWind['kind'][]} */
+const KINDS = [
+  'head',
+  'head',
+  'cross-right',
+  'tail',
+  'tail',
+  'tail',
+  'cross-left',
+  'head',
+];
 
 /**
  * Classify the wind relative to a group's travel direction.
@@ -20,25 +44,11 @@
  */
 export function classifyWind(windFromDeg, headingDeg) {
   const relAngle = (((windFromDeg - headingDeg) % 360) + 360) % 360;
-  // direction the wind pushes, relative to "up = forward" (for the arrow)
-  const toward = (relAngle + 180) % 360;
+  // The arrow points where the wind PUSHES (downwind), like letour's: a ↑ glyph
+  // (up = ahead) rotated by relAngle+180. Tailwind (from 180) → up, headwind → down,
+  // from the right (90) → pushes/points left, from the left (270) → points right.
+  const arrowDeg = (relAngle + 180) % 360;
 
-  /** @type {RelativeWind['kind']} */
-  let kind;
-  let label;
-  if (relAngle >= 315 || relAngle < 45) {
-    kind = 'head';
-    label = 'headwind';
-  } else if (relAngle < 135) {
-    kind = 'cross-right'; // wind comes from the rider's right
-    label = 'cross ►';
-  } else if (relAngle < 225) {
-    kind = 'tail';
-    label = 'tailwind';
-  } else {
-    kind = 'cross-left'; // wind comes from the rider's left
-    label = 'cross ◄';
-  }
-
-  return { relAngle, toward, kind, label };
+  const sector = Math.round(relAngle / 45) % 8;
+  return { relAngle, arrowDeg, kind: KINDS[sector], label: LABELS[sector] };
 }

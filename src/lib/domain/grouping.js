@@ -9,9 +9,9 @@
  * @property {number} gapToPrevious  seconds behind the previous group
  * @property {number} kmToFinish  of the group's first rider
  * @property {number} kph  instantaneous speed, mean of the group's riders (NaN if unknown)
- * @property {number|null} [heading]  travel bearing in degrees (set during applyTick)
- * @property {import('../data/weather.js').Weather|null} [weather]  weather at the group's position
- * @property {import('./wind.js').RelativeWind|null} [relWind]  wind relative to travel
+ * @property {number|null} [tempC]  air temperature from the feed (leader), °C
+ * @property {number|null} [windKph]  wind speed from the feed (leader), km/h
+ * @property {import('./wind.js').RelativeWind|null} [relWind]  wind relative to travel (from feed course + windDir)
  */
 
 /**

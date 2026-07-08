@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "fixtures": "node fixtures/generate-synthetic.mjs",
+    "fixtures": "node fixtures/generate-synthetic.mjs && node fixtures/generate-drop.mjs && node fixtures/generate-profile.mjs && node fixtures/make-recording.mjs synthetic-basic && node fixtures/make-recording.mjs synthetic-drop",
     "icons": "node tools/generate-icons.mjs",
     "zip": "npm run build && python3 -c \"import shutil; shutil.rmtree('dist/fixtures', ignore_errors=True); shutil.make_archive('racecenter-peloton', 'zip', 'dist')\""
   },

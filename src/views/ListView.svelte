@@ -40,27 +40,17 @@
           <span class="gkph">{Math.round(group.kph)} km/h</span>
         {/if}
         <span class="gkm">{group.kmToFinish.toFixed(1)} km to go</span>
-        {#if group.weather}
-          {#if group.relWind}
+        {#if group.relWind && group.windKph != null}
+          <span class="gwind {group.relWind.kind}">
             <span
-              class="gwind {group.relWind.kind}"
-              title="wind {Math.round(group.weather.speed)} km/h from {Math.round(
-                group.weather.direction,
-              )}°, gusts {Math.round(group.weather.gusts)} km/h"
+              class="warrow"
+              style="transform: rotate({group.relWind.arrowDeg}deg)">↑</span
             >
-              <span
-                class="warrow"
-                style="transform: rotate({group.relWind.toward}deg)">↑</span
-              >
-              {Math.round(group.weather.speed)} km/h {group.relWind.label}
-            </span>
-          {/if}
-          <span class="gtemp">{Math.round(group.weather.temp)}°C</span>
-          {#if group.weather.precip > 0}
-            <span class="grain" title="precipitation, last hour"
-              >☔ {group.weather.precip.toFixed(1)} mm</span
-            >
-          {/if}
+            {Math.round(group.windKph)} km/h {group.relWind.label}
+          </span>
+        {/if}
+        {#if group.tempC != null}
+          <span class="gtemp">{Math.round(group.tempC)}°C</span>
         {/if}
       </header>
       <div class="chips">
@@ -144,11 +134,6 @@
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     color: #555;
-  }
-  .grain {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: #1565c0;
   }
   .chips {
     display: flex;

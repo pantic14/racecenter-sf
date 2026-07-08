@@ -1,6 +1,8 @@
 doc/
+data-repo/
 legacy/
 node_modules/
 dist/
 public/fixtures/*.json
+public/fixtures/*.json.gz
 racecenter-peloton.zip

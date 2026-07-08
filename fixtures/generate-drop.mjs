@@ -40,6 +40,12 @@ function gapOf(bib, t, idx) {
 const events = [];
 for (let t = 0; t < TICKS; t++) {
   const leaderKm = START_KM_TO_GO - t * KM_PER_SEC;
+  const wx = {
+    Course: Math.round(135 + 10 * Math.sin(t / 50)),
+    RiderWindDir: (60 + t) % 360,
+    kphWind: 12 + Math.round(6 * Math.sin(t / 30)),
+    degC: 23 + Math.round(3 * Math.sin(t / 60)),
+  };
   const Riders = bibs.map((bib) => {
     const idx = BREAK.includes(bib) ? BREAK.indexOf(bib) : bib % 7;
     const gap = gapOf(bib, t, idx);
@@ -52,6 +58,7 @@ for (let t = 0; t < TICKS; t++) {
       Latitude: Number((45.0 - (START_KM_TO_GO - leaderKm) * 0.008).toFixed(5)),
       Longitude: Number((6.0 + (START_KM_TO_GO - leaderKm) * 0.005).toFixed(5)),
       mAlt: 300,
+      ...wx,
     };
   });
   events.push({

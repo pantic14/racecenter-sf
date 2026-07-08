@@ -41,9 +41,22 @@ function pelotonGap(t) {
   return 180 - (20 * t) / TICKS;
 }
 
+// Weather rides inside the telemetry feed (Course/RiderWindDir/kphWind/degC), so
+// mock/replay show real feed weather. Rotate the wind bearing over the 5 min so the
+// arrow and 8-way label visibly sweep head->cross->tail during dev.
+function weatherAt(t) {
+  return {
+    Course: Math.round(135 + 10 * Math.sin(t / 50)), // ~SE travel heading
+    RiderWindDir: (60 + t) % 360, // absolute "from" bearing, slowly rotating
+    kphWind: 12 + Math.round(6 * Math.sin(t / 30)),
+    degC: 23 + Math.round(3 * Math.sin(t / 60)),
+  };
+}
+
 const events = [];
 for (let t = 0; t < TICKS; t++) {
   const leaderKm = START_KM_TO_GO - t * KM_PER_SEC;
+  const wx = weatherAt(t);
   const Riders = bibs.map((bib) => {
     const idx = BREAK.includes(bib)
       ? BREAK.indexOf(bib)
@@ -61,6 +74,7 @@ for (let t = 0; t < TICKS; t++) {
       Latitude: Number((45.0 - (START_KM_TO_GO - leaderKm) * 0.008).toFixed(5)),
       Longitude: Number((6.0 + (START_KM_TO_GO - leaderKm) * 0.005).toFixed(5)),
       mAlt: 300 + Math.round(20 * Math.sin(t / 40)),
+      ...wx,
     };
   });
   events.push({
