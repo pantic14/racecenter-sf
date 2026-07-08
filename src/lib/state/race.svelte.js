@@ -49,7 +49,12 @@ let routePoints = null;
  * @param {import('../domain/route.js').RoutePoint[]|null} points
  */
 export function setRoute(points) {
-  routePoints = points && points.length ? points : null;
+  const next = points && points.length ? points : null;
+  // No-op when the route is unchanged. Critical: setRoute is called synchronously
+  // from an $effect, so an unconditional `routeVersion++` (a read-modify-write)
+  // makes that effect read and write the same state → infinite effect loop.
+  if (next === routePoints) return;
+  routePoints = next;
   race.routeVersion++;
 }
 
