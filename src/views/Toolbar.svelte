@@ -31,6 +31,7 @@
 
   <nav>
     <button class:active={ui.tab === 'list'} onclick={() => (ui.tab = 'list')}>Peloton</button>
+    <button class:active={ui.tab === 'profile'} onclick={() => (ui.tab = 'profile')}>Profile</button>
     <button class:active={ui.tab === 'settings'} onclick={() => (ui.tab = 'settings')}>Settings</button>
     <button class="pause" onclick={togglePause} title={race.paused ? 'resume' : 'pause the view (data keeps flowing)'}>
       {race.paused ? '▶' : '⏸'}

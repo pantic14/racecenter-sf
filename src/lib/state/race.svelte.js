@@ -29,7 +29,26 @@ export const race = $state({
   paused: false,
   /** @type {import('../domain/grouping.js').Group[]} */
   frozenGroups: [],
+  /** bumped when the route changes; the points themselves stay non-reactive */
+  routeVersion: 0,
 });
+
+/** @type {import('../domain/route.js').RoutePoint[]|null} */
+let routePoints = null;
+
+/**
+ * Route/altimetry points live outside $state: thousands of points at 1 Hz
+ * reads don't need (or want) reactive proxying.
+ * @param {import('../domain/route.js').RoutePoint[]|null} points
+ */
+export function setRoute(points) {
+  routePoints = points && points.length ? points : null;
+  race.routeVersion++;
+}
+
+export function getRoute() {
+  return routePoints;
+}
 
 /** @param {import('../data/tick.js').Tick} tick */
 export function applyTick(tick) {

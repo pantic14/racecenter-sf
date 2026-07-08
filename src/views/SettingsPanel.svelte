@@ -1,10 +1,28 @@
 <script>
   import { settings } from '../lib/state/settings.svelte.js';
   import { ui } from '../lib/state/ui.svelte.js';
+  import { race } from '../lib/state/race.svelte.js';
+  import { discovery, discoveryDump } from '../lib/state/discovery.svelte.js';
   import { MARK_COLORS, colorOf } from '../lib/colors.js';
+  import { YEAR, BASE_URL } from '../lib/config.js';
 
   let importText = $state('');
   let importMsg = $state('');
+  let stageApiDump = $state('');
+
+  const stageDate = $derived(race.stage?.date?.substring(0, 10) ?? '');
+
+  async function dumpStageApi() {
+    try {
+      const res = await fetch(`${BASE_URL}/api/stage-${YEAR}`);
+      const text = await res.text();
+      // surface any hint of profile/route file urls
+      const hits = text.match(/[^"]*(profil|\.csv|route)[^"]*/gi) ?? [];
+      stageApiDump = (hits.length ? `MATCHES:\n${hits.slice(0, 30).join('\n')}\n\n` : 'no profile/csv/route strings found\n\n') + text.slice(0, 4000) + '…';
+    } catch (e) {
+      stageApiDump = `failed: ${e.message}`;
+    }
+  }
 
   function applyBulk(colorId) {
     const bibs = (settings.bulkInputs[colorId] ?? '')
@@ -88,6 +106,41 @@
   </section>
 
   <section>
+    <h3>Stage profile</h3>
+    <p class="hint">
+      Altimetry CSV URL for today's stage ({stageDate || '…'}). To find it: open
+      racecenter.letour.fr during a stage, DevTools → Network, filter <code>profil</code>,
+      copy the CSV URL and paste it here.
+    </p>
+    <input
+      type="text"
+      class="wide"
+      placeholder="/profils/{YEAR}/profile-NN-….csv or full URL"
+      bind:value={settings.profileUrls[stageDate]}
+    />
+  </section>
+
+  <section>
+    <h3>Data discovery <small>(dev)</small></h3>
+    <p class="hint">Every SSE bind seen this session, with a sample payload — useful to map what the feed offers.</p>
+    {#if Object.keys(discovery.binds).length === 0}
+      <p class="hint">nothing received yet</p>
+    {:else}
+      {#each Object.entries(discovery.binds) as [bind, info] (bind)}
+        <details>
+          <summary><code>{bind}</code> · {info.count}× · last {info.lastAt}</summary>
+          <pre>{info.sample}</pre>
+        </details>
+      {/each}
+      <button onclick={() => navigator.clipboard.writeText(discoveryDump())}>Copy all samples</button>
+    {/if}
+    <p>
+      <button onclick={dumpStageApi}>Dump stage API (search profile URLs)</button>
+    </p>
+    {#if stageApiDump}<pre>{stageApiDump}</pre>{/if}
+  </section>
+
+  <section>
     <h3>Import from the old console script</h3>
     <p class="hint">
       On racecenter.letour.fr run
@@ -163,7 +216,24 @@
     border-color: #c62828;
     color: #c62828;
   }
-  textarea {
+  textarea,
+  input.wide {
     width: 100%;
+    box-sizing: border-box;
+  }
+  pre {
+    max-height: 240px;
+    overflow: auto;
+    background: #f4f4f2;
+    border: 1px solid #e0e0dc;
+    padding: 6px;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  details summary {
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 0;
   }
 </style>

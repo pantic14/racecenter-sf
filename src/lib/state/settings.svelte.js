@@ -14,6 +14,8 @@ const defaults = {
   marks: {},
   /** @type {Record<string, string>} color id -> last bulk input */
   bulkInputs: {},
+  /** @type {Record<string, string>} stage date -> profile CSV url (discovered per stage) */
+  profileUrls: {},
 };
 
 export const settings = $state(structuredClone(defaults));

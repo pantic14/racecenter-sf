@@ -20,10 +20,11 @@ const RETRY_MAX_MS = 30_000;
  *   bind: string,
  *   onTick: (tick: import('./tick.js').Tick) => void,
  *   onStatus: (status: string) => void,
+ *   onRaw?: (data: string) => void,
  *   EventSourceImpl?: typeof EventSource,
  * }} opts
  */
-export function createLiveSource({ url, bind, onTick, onStatus, EventSourceImpl = EventSource }) {
+export function createLiveSource({ url, bind, onTick, onStatus, onRaw, EventSourceImpl = EventSource }) {
   current?.close();
 
   /** @type {EventSource|null} */
@@ -46,9 +47,11 @@ export function createLiveSource({ url, bind, onTick, onStatus, EventSourceImpl 
     };
     es.addEventListener('update', (e) => {
       lastEventAt = Date.now();
+      const raw = /** @type {MessageEvent} */ (e).data;
+      onRaw?.(raw);
       let d;
       try {
-        d = JSON.parse(/** @type {MessageEvent} */ (e).data);
+        d = JSON.parse(raw);
       } catch {
         return;
       }

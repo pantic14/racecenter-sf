@@ -1,16 +1,19 @@
 <script>
   import { onMount } from 'svelte';
-  import { race, applyTick, setSseStatus, pushError } from './lib/state/race.svelte.js';
+  import { race, applyTick, setSseStatus, pushError, setRoute } from './lib/state/race.svelte.js';
   import { settings, settingsMeta, initSettings, persistSettings } from './lib/state/settings.svelte.js';
   import { ui } from './lib/state/ui.svelte.js';
+  import { recordRawUpdate } from './lib/state/discovery.svelte.js';
   import { createLiveSource } from './lib/data/sse.js';
-  import { fetchRiders, fetchTeams, fetchStages } from './lib/data/api.js';
+  import { fetchRiders, fetchTeams, fetchStages, fetchProfileCsv } from './lib/data/api.js';
   import { BASE_URL, TELEMETRY_BIND } from './lib/config.js';
   import { loadMockEventSource } from './lib/data/mock.js';
+  import { parseRouteCsv } from './lib/domain/route.js';
   import { logGroups } from './lib/storage/tickLog.js';
   import { beep } from './lib/alerts/sound.js';
   import Toolbar from './views/Toolbar.svelte';
   import ListView from './views/ListView.svelte';
+  import ProfileView from './views/ProfileView.svelte';
   import SettingsPanel from './views/SettingsPanel.svelte';
   import RiderCard from './views/RiderCard.svelte';
 
@@ -50,10 +53,40 @@
         bind: TELEMETRY_BIND,
         onTick: applyTick,
         onStatus: setSseStatus,
+        onRaw: recordRawUpdate,
         EventSourceImpl,
       });
     })();
     return () => source?.close();
+  });
+
+  // load the stage's altimetry when a profile URL is known
+  // (in mock mode the synthetic profile is used so the view can be developed)
+  const stageDate = $derived(race.stage?.date?.substring(0, 10) ?? '');
+  const profileUrl = $derived(
+    mockFixture ? 'fixtures/profile-synthetic.csv' : (settings.profileUrls[stageDate] || ''),
+  );
+  $effect(() => {
+    const url = profileUrl;
+    if (!settingsMeta.loaded) return;
+    if (!url) {
+      setRoute(null);
+      return;
+    }
+    let cancelled = false;
+    fetchProfileCsv(url)
+      .then((text) => {
+        if (cancelled) return;
+        const points = parseRouteCsv(text);
+        setRoute(points);
+        if (!points.length) pushError('profile', `profile CSV parsed to 0 points (${url})`);
+      })
+      .catch((e) => {
+        if (!cancelled) pushError('profile', e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
   });
 
   // persist settings on any deep change (debounced in storage layer)
@@ -96,6 +129,8 @@
 
 {#if ui.tab === 'settings'}
   <SettingsPanel />
+{:else if ui.tab === 'profile'}
+  <ProfileView />
 {:else}
   {#if !race.tick && !mockFixture && race.status.sse !== 'live'}
     <p class="waithint">
