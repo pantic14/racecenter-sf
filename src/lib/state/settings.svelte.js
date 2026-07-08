@@ -10,10 +10,8 @@ const defaults = {
   beepForAll: false,
   soundOn: true,
   myColor: '#ff4500',
-  /** @type {Record<string, string>} bib -> color id */
+  /** @type {Record<string, string>} bib -> color id (single source of truth for marking) */
   marks: {},
-  /** @type {Record<string, string>} color id -> last bulk input */
-  bulkInputs: {},
   /** @type {Record<string, string>} stage date -> profile CSV url (discovered per stage) */
   profileUrls: {},
 };

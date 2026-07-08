@@ -6,11 +6,54 @@
   import { MARK_COLORS, colorOf } from '../lib/colors.js';
   import { YEAR, BASE_URL } from '../lib/config.js';
 
+  import { RACE_KEY } from '../lib/config.js';
+  import { parseBibList, bibsForColor, syncColorList, exportMarks, importMarks } from '../lib/marks.js';
+
   let importText = $state('');
   let importMsg = $state('');
   let stageApiDump = $state('');
+  /** unsaved edits per color; when absent the input mirrors the live marks */
+  let drafts = $state({});
+  let exportMsg = $state('');
 
   const stageDate = $derived(race.stage?.date?.substring(0, 10) ?? '');
+
+  function listShown(colorId) {
+    return drafts[colorId] ?? bibsForColor(settings.marks, colorId).join(', ');
+  }
+
+  function applyColor(colorId) {
+    syncColorList(settings.marks, colorId, parseBibList(listShown(colorId)));
+    delete drafts[colorId];
+  }
+
+  async function copyMarks() {
+    await navigator.clipboard.writeText(exportMarks($state.snapshot(settings.marks), RACE_KEY));
+    exportMsg = 'copied to clipboard';
+  }
+
+  function downloadMarks() {
+    const blob = new Blob([exportMarks($state.snapshot(settings.marks), RACE_KEY)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `racecenter-marks-${stageDate || 'export'}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function doImport() {
+    try {
+      const { count, legacy } = importMarks(settings.marks, importText);
+      if (legacy.minGap) settings.minGap = legacy.minGap;
+      if (legacy.maxSlowSpeed) settings.maxSlowSpeed = legacy.maxSlowSpeed;
+      if (legacy.myColor) settings.myColor = legacy.myColor;
+      importMsg = `imported ok (${count} marked riders)`;
+      importText = '';
+      drafts = {};
+    } catch (e) {
+      importMsg = `import failed: ${e.message}`;
+    }
+  }
 
   async function dumpStageApi() {
     try {
@@ -24,38 +67,9 @@
     }
   }
 
-  function applyBulk(colorId) {
-    const bibs = (settings.bulkInputs[colorId] ?? '')
-      .split(',')
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => Number.isFinite(n) && n > 0);
-    for (const bib of bibs) settings.marks[bib] = colorId;
-  }
-
   function clearAllMarks() {
     settings.marks = {};
-  }
-
-  function importLegacy() {
-    try {
-      const old = JSON.parse(importText);
-      if (old.min_gap) settings.minGap = Number(old.min_gap);
-      if (old.max_slow_speed) settings.maxSlowSpeed = Number(old.max_slow_speed);
-      if (old.mycolor) settings.myColor = old.mycolor;
-      let count = 0;
-      if (old.riders) {
-        for (const [bib, v] of Object.entries(old.riders)) {
-          if (v?.color) {
-            settings.marks[bib] = v.color === 'white' ? 'grey' : v.color;
-            count++;
-          }
-        }
-      }
-      importMsg = `imported ok (${count} marked riders)`;
-      importText = '';
-    } catch (e) {
-      importMsg = `import failed: ${e.message}`;
-    }
+    drafts = {};
   }
 </script>
 
@@ -89,20 +103,32 @@
   </section>
 
   <section>
-    <h3>Bulk marking</h3>
-    <p class="hint">Comma-separated bib numbers per color (e.g. <code>1, 51, 61, 81</code>) — favorites, sprinters, today's breakaway…</p>
+    <h3>Marked riders by color</h3>
+    <p class="hint">
+      Live lists: marking a rider anywhere (peloton view, team marking…) updates them.
+      Edit the comma-separated bibs and Apply (or Enter) to sync — bibs you remove get unmarked.
+    </p>
     {#each MARK_COLORS as c (c.id)}
       <div class="bulkrow">
         <span class="dot" style="background:{colorOf(c.id, settings.myColor).bg}" title={c.id}></span>
+        <span class="count">{bibsForColor(settings.marks, c.id).length}</span>
         <input
           type="text"
-          placeholder="bibs for {c.id}"
-          bind:value={settings.bulkInputs[c.id]}
+          placeholder="bibs for {c.id} (e.g. 1, 51, 61)"
+          class:dirty={drafts[c.id] != null}
+          value={listShown(c.id)}
+          oninput={(e) => (drafts[c.id] = e.currentTarget.value)}
+          onkeydown={(e) => e.key === 'Enter' && applyColor(c.id)}
         />
-        <button onclick={() => applyBulk(c.id)}>Apply</button>
+        <button onclick={() => applyColor(c.id)} disabled={drafts[c.id] == null}>Apply</button>
       </div>
     {/each}
-    <button class="danger" onclick={clearAllMarks}>Clear all marks</button>
+    <div class="rowbtns">
+      <button onclick={copyMarks}>Copy marks (share)</button>
+      <button onclick={downloadMarks}>Download .json</button>
+      <button class="danger" onclick={clearAllMarks}>Clear all marks</button>
+      {#if exportMsg}<span class="hint">{exportMsg}</span>{/if}
+    </div>
   </section>
 
   <section>
@@ -141,14 +167,14 @@
   </section>
 
   <section>
-    <h3>Import from the old console script</h3>
+    <h3>Import marks</h3>
     <p class="hint">
-      On racecenter.letour.fr run
-      <code>copy(localStorage.getItem('racecenter.letour.fr-2026-settings'))</code>
-      in the console, then paste here.
+      Paste a shared export ({'{'}"marks": …{'}'}) or the old console script's settings
+      (<code>copy(localStorage.getItem('racecenter.letour.fr-2026-settings'))</code>).
+      Imported marks are merged over yours.
     </p>
-    <textarea rows="3" bind:value={importText} placeholder="paste settings JSON"></textarea>
-    <button onclick={importLegacy} disabled={!importText.trim()}>Import</button>
+    <textarea rows="3" bind:value={importText} placeholder="paste marks/settings JSON"></textarea>
+    <button onclick={doImport} disabled={!importText.trim()}>Import</button>
     {#if importMsg}<p class="hint">{importMsg}</p>{/if}
   </section>
 </div>
@@ -212,9 +238,26 @@
     background: #fee5d9;
   }
   .danger {
-    margin-top: 8px;
     border-color: #c62828;
     color: #c62828;
+  }
+  .count {
+    font-size: 11px;
+    color: #999;
+    min-width: 20px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .bulkrow input.dirty {
+    border-color: #b26a00;
+    outline: 1px solid #b26a00;
+  }
+  .rowbtns {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+    flex-wrap: wrap;
   }
   textarea,
   input.wide {
