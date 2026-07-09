@@ -73,6 +73,7 @@ export function applyTick(tick) {
     const lead = group.riders[0];
     group.tempC = Number.isFinite(lead?.tempC) ? lead.tempC : null;
     group.windKph = Number.isFinite(lead?.windKph) ? lead.windKph : null;
+    group.gradient = Number.isFinite(lead?.gradient) ? lead.gradient : null;
     group.relWind =
       lead && Number.isFinite(lead.windDir) && Number.isFinite(lead.course)
         ? classifyWind(lead.windDir, lead.course)

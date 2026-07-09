@@ -11,6 +11,7 @@
  * @property {number} kph  instantaneous speed, mean of the group's riders (NaN if unknown)
  * @property {number|null} [tempC]  air temperature from the feed (leader), °C
  * @property {number|null} [windKph]  wind speed from the feed (leader), km/h
+ * @property {number|null} [gradient]  road grade from the feed (leader), %
  * @property {import('./wind.js').RelativeWind|null} [relWind]  wind relative to travel (from feed course + windDir)
  */
 

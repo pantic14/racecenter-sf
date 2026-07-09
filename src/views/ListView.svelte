@@ -1,6 +1,7 @@
 <script>
   import { race } from '../lib/state/race.svelte.js';
   import { prettyTime } from '../lib/util.js';
+  import { gradeColor } from '../lib/colors.js';
   import RiderChip from './RiderChip.svelte';
 
   const shown = $derived(race.paused ? race.frozenGroups : race.groups);
@@ -51,6 +52,12 @@
         {/if}
         {#if group.tempC != null}
           <span class="gtemp">{Math.round(group.tempC)}°C</span>
+        {/if}
+        {#if group.gradient != null}
+          <span class="ggrad" style="color: {gradeColor(group.gradient)}" title="road grade">
+            {group.gradient > 0 ? '↗' : group.gradient < 0 ? '↘' : '→'}
+            {group.gradient > 0 ? '+' : ''}{group.gradient}%
+          </span>
         {/if}
       </header>
       <div class="chips">
@@ -134,6 +141,13 @@
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     color: #555;
+  }
+  .ggrad {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
   }
   .chips {
     display: flex;

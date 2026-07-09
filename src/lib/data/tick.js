@@ -14,6 +14,7 @@
  * @property {number} windKph  wind speed at the rider, km/h, NaN if absent
  * @property {number} windDir  absolute wind bearing in degrees, NaN if absent
  * @property {number} tempC    air temperature at the rider, °C, NaN if absent
+ * @property {number} gradient road grade at the rider, %, NaN if absent
  */
 
 /**
@@ -46,6 +47,7 @@ export function normalizeTelemetry(payload) {
       windKph: r.kphWind != null ? Number(r.kphWind) : NaN,
       windDir: r.RiderWindDir != null ? Number(r.RiderWindDir) : NaN,
       tempC: r.degC != null ? Number(r.degC) : NaN,
+      gradient: r.Gradient != null ? Number(r.Gradient) : NaN,
     });
   }
   // since 2026 riders aren't always ordered by gap in the feed
