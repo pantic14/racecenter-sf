@@ -1,26 +1,11 @@
 // @ts-check
+import { openDb as db } from './db.js';
 
 // IndexedDB log of one compact group summary per tick (~300 B). Recording
 // starts in M1 so the gap-history view (M4) has data from day one.
+// The database/schema now lives in db.js (shared with the replay cache).
 
-const DB_NAME = 'racecenter-peloton';
 const STORE = 'groupHistory';
-
-/** @type {Promise<IDBDatabase>|null} */
-let dbPromise = null;
-
-function db() {
-  dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const store = req.result.createObjectStore(STORE, { autoIncrement: true });
-      store.createIndex('stage', 'stage');
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-  return dbPromise;
-}
 
 /**
  * @param {string} stage  stage date 'yyyy-mm-dd' (or 'mock:<fixture>' in mock mode)

@@ -3,6 +3,7 @@
   import { race, applyTick, setSseStatus, pushError, setRoute } from './lib/state/race.svelte.js';
   import { settings, settingsMeta, initSettings, persistSettings } from './lib/state/settings.svelte.js';
   import { ui } from './lib/state/ui.svelte.js';
+  import { registerReplayHooks } from './lib/state/replaySession.svelte.js';
   import { recordRawUpdate } from './lib/state/discovery.svelte.js';
   import { createLiveSource } from './lib/data/sse.js';
   import { fetchRiders, fetchTeams, fetchStages, fetchProfileCsv } from './lib/data/api.js';
@@ -14,6 +15,7 @@
   import { createAlertEngine } from './lib/alerts/engine.js';
   import { pushAlert } from './lib/state/alerts.svelte.js';
   import Toolbar from './views/Toolbar.svelte';
+  import ReplayBar from './views/ReplayBar.svelte';
   import ListView from './views/ListView.svelte';
   import ProfileView from './views/ProfileView.svelte';
   import SettingsPanel from './views/SettingsPanel.svelte';
@@ -26,8 +28,27 @@
   const mockFixture = mockParam === '1' ? 'synthetic-basic' : mockParam;
   const speed = Number(params.get('speed')) || 1;
 
+  // The live SSE is started/stopped as a unit so replay can suspend it and resume
+  // it on exit. esImpl (real EventSource or the mock replayer) is fixed at mount.
+  let liveSource = null;
+  let esImpl = EventSource;
+
+  function stopLive() {
+    liveSource?.close();
+    liveSource = null;
+  }
+  function startLive() {
+    liveSource = createLiveSource({
+      url: BASE_URL + '/live-stream',
+      bind: TELEMETRY_BIND,
+      onTick: applyTick,
+      onStatus: setSseStatus,
+      onRaw: recordRawUpdate,
+      EventSourceImpl: esImpl,
+    });
+  }
+
   onMount(() => {
-    let source;
     (async () => {
       await initSettings();
 
@@ -44,24 +65,17 @@
       if (stagesRes.status === 'fulfilled') race.stage = stagesRes.value.currentStage;
       else pushError('stages', String(stagesRes.reason?.message ?? stagesRes.reason));
 
-      let EventSourceImpl = EventSource;
       if (mockFixture) {
         try {
-          EventSourceImpl = await loadMockEventSource(mockFixture, speed);
+          esImpl = await loadMockEventSource(mockFixture, speed);
         } catch (e) {
           pushError('mock', e.message);
         }
       }
-      source = createLiveSource({
-        url: BASE_URL + '/live-stream',
-        bind: TELEMETRY_BIND,
-        onTick: applyTick,
-        onStatus: setSseStatus,
-        onRaw: recordRawUpdate,
-        EventSourceImpl,
-      });
+      registerReplayHooks({ stopLive, startLive, resetAlertEngine });
+      startLive();
     })();
-    return () => source?.close();
+    return () => stopLive();
   });
 
   // load the stage's altimetry when a profile URL is known
@@ -109,8 +123,12 @@
     if (anySlow) beep(240, 60);
   });
 
-  // smart alerts: evaluate every tick over the tracked groups
-  const alertEngine = createAlertEngine();
+  // smart alerts: evaluate every tick over the tracked groups.
+  // Recreated on entering/leaving/seeking a replay so no alert state spans the jump.
+  let alertEngine = createAlertEngine();
+  function resetAlertEngine() {
+    alertEngine = createAlertEngine();
+  }
   $effect(() => {
     const tick = race.tick;
     if (!tick) return;
@@ -137,12 +155,14 @@
   });
   $effect(() => {
     const tick = race.tick;
-    if (!tick || !historyKey) return;
+    // Don't record history during replay — the stage is already archived.
+    if (!tick || !historyKey || ui.replay) return;
     logGroups(historyKey, tick.timeStamp, $state.snapshot(race.groups)).catch(() => {});
   });
 </script>
 
 <Toolbar />
+<ReplayBar />
 
 {#if mockFixture}
   <div class="mockbar">

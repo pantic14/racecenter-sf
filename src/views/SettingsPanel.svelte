@@ -3,10 +3,11 @@
   import { race } from '../lib/state/race.svelte.js';
   import { discovery, discoveryDump } from '../lib/state/discovery.svelte.js';
   import { MARK_COLORS, colorOf } from '../lib/colors.js';
-  import { YEAR, BASE_URL } from '../lib/config.js';
+  import { YEAR, BASE_URL, DATA_REPO_URL } from '../lib/config.js';
 
   import { RACE_KEY } from '../lib/config.js';
   import { parseBibList, bibsForColor, syncColorList, exportMarks, importMarks } from '../lib/marks.js';
+  import { listCached, deleteCached } from '../lib/data/archive.js';
 
   let importText = $state('');
   let importMsg = $state('');
@@ -70,6 +71,20 @@
     settings.marks = {};
     drafts = {};
   }
+
+  /** @type {{id:string, bytes:number, entry:any}[]} */
+  let cachedRecs = $state([]);
+  async function refreshCached() {
+    cachedRecs = await listCached().catch(() => []);
+  }
+  $effect(() => {
+    refreshCached();
+  });
+  async function removeCached(id) {
+    await deleteCached(id);
+    await refreshCached();
+  }
+  const fmtSize = (b) => (b >= 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 </script>
 
 <div class="panel">
@@ -163,6 +178,27 @@
       placeholder="/profils/{YEAR}/profile-NN-….csv or full URL"
       bind:value={settings.profileUrls[stageDate]}
     />
+  </section>
+
+  <section>
+    <h3>Replay</h3>
+    <p class="hint">
+      Base URL of the public data repo that hosts stage recordings. Leave blank to use
+      the default. Recordings download on demand and are cached locally.
+    </p>
+    <input type="text" class="wide" placeholder={DATA_REPO_URL} bind:value={settings.dataRepoUrl} />
+    {#if cachedRecs.length}
+      <p class="hint">Cached recordings:</p>
+      {#each cachedRecs as rec (rec.id)}
+        <div class="bulkrow">
+          <span class="count" style="min-width:auto">{fmtSize(rec.bytes)}</span>
+          <span style="flex:1; font-size:13px">{rec.entry?.name ?? rec.id}</span>
+          <button class="danger" onclick={() => removeCached(rec.id)}>Delete</button>
+        </div>
+      {/each}
+    {:else}
+      <p class="hint">no recordings cached yet</p>
+    {/if}
   </section>
 
   <section>

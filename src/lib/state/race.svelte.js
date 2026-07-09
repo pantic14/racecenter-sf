@@ -5,7 +5,7 @@ import { createTrendTracker } from '../domain/trends.js';
 import { classifyWind } from '../domain/wind.js';
 import { settings } from './settings.svelte.js';
 
-const trendTracker = createTrendTracker();
+let trendTracker = createTrendTracker();
 // Wind, heading and temperature all come from the live feed (Course, RiderWindDir,
 // kphWind, degC) — no external weather API.
 
@@ -81,6 +81,21 @@ export function applyTick(tick) {
   race.groups = groups;
   race.trends = trendTracker.update(race.groups, tick.timeStamp);
   race.status.lastTickAt = Date.now();
+}
+
+/**
+ * Wipe everything derived from the tick stream (tick/groups/trends/frozen/paused)
+ * and start a fresh trend tracker. riders/teams/stage are left untouched — the
+ * replay session swaps those separately. Called when entering/leaving/seeking a
+ * replay so no state bleeds across the discontinuity.
+ */
+export function resetRace() {
+  race.tick = null;
+  race.groups = [];
+  race.trends = {};
+  race.frozenGroups = [];
+  race.paused = false;
+  trendTracker = createTrendTracker();
 }
 
 export function togglePause() {

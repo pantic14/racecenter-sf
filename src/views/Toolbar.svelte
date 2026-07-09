@@ -37,6 +37,12 @@
     <button class="pause" onclick={togglePause} title={race.paused ? 'resume' : 'pause the view (data keeps flowing)'}>
       {race.paused ? '▶' : '⏸'}
     </button>
+    <button
+      class="replay"
+      class:active={!!ui.replay || ui.replayOpen}
+      onclick={() => (ui.replayOpen = true)}
+      title="replay a past stage"
+    >⟲</button>
   </nav>
 
   <span class="status {race.status.sse}" title="live data connection">{race.status.sse}</span>
@@ -114,7 +120,8 @@
     background: #ba4a19;
     color: #fff;
   }
-  nav .pause {
+  nav .pause,
+  nav .replay {
     min-width: 34px;
   }
   .status {
