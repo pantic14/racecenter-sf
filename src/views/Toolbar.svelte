@@ -16,6 +16,17 @@
       .map(([bib]) => bib);
   }
 
+  // Lowest bib in the team; teams with no riders loaded yet sort last.
+  function lowestBib(teamId) {
+    const bibs = teamBibs(teamId).map(Number).filter((n) => Number.isFinite(n));
+    return bibs.length ? Math.min(...bibs) : Infinity;
+  }
+
+  // Jerseys ordered by the team's lowest bib (natural cycling order).
+  const sortedTeams = $derived(
+    [...race.teams].sort((a, b) => lowestBib(a._id) - lowestBib(b._id))
+  );
+
   function markTeam(colorId) {
     for (const bib of teamBibs(ui.selectedTeam)) {
       if (colorId) settings.marks[bib] = colorId;
@@ -50,7 +61,7 @@
   <div class="stage">{race.stage ? `${race.stage.name} · ${race.stage.length} km` : ''}</div>
 
   <div class="jerseys">
-    {#each race.teams as team (team._id)}
+    {#each sortedTeams as team (team._id)}
       <button
         class="jersey"
         class:selected={ui.selectedTeam === team._id}
@@ -152,7 +163,7 @@
     border-radius: 3px;
   }
   .jersey img {
-    width: 22px;
+    width: 32px;
     display: block;
   }
   .jersey.selected,
