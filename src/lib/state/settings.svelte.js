@@ -14,8 +14,6 @@ const defaults = {
   marks: {},
   /** @type {Record<string, string>} stage date -> profile CSV url (discovered per stage) */
   profileUrls: {},
-  /** Base URL of the replay data repo; '' falls back to DATA_REPO_URL (config.js) */
-  dataRepoUrl: '',
   /** @type {import('../alerts/engine.js').AlertConfig} */
   alerts: {
     dropEnabled: true,

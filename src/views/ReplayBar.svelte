@@ -1,7 +1,6 @@
 <script>
   import { race } from '../lib/state/race.svelte.js';
   import { ui } from '../lib/state/ui.svelte.js';
-  import { settings } from '../lib/state/settings.svelte.js';
   import { DATA_REPO_URL } from '../lib/config.js';
   import { fetchIndex, listCached } from '../lib/data/archive.js';
   import {
@@ -24,7 +23,7 @@
   /** @type {{id:string, received:number, total:number}|null} */
   let dl = $state(null);
 
-  const baseUrl = $derived((settings.dataRepoUrl || '').trim() || DATA_REPO_URL);
+  const baseUrl = DATA_REPO_URL;
   const kmToGo = $derived(race.tick?.riders[0]?.kmToFinish);
 
   async function loadIndex() {

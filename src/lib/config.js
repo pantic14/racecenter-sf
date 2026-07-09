@@ -8,10 +8,10 @@ export const YEAR = new Date().getUTCFullYear();
 export const RACE_KEY = `racecenter.letour.fr-${YEAR}`;
 export const TELEMETRY_BIND = `telemetryCompetitor-${YEAR}`;
 
-// Public data repo hosting stage recordings for replay (M6). raw.githubusercontent
-// serves it with open CORS. The user sets their own username via Settings →
-// dataRepoUrl (this is only the fallback default). See doc/replay-plan.md.
-export const DATA_REPO_URL = 'https://raw.githubusercontent.com/USER/racecenter-data/main';
+// Public data repo hosting stage recordings for replay (M6), baked in — users only
+// pick from the available recordings, they never configure a URL. raw.githubusercontent
+// serves index.json + the recordings with open CORS. See doc/replay-plan.md.
+export const DATA_REPO_URL = 'https://raw.githubusercontent.com/pantic14/racecenter-data/main';
 
 // The official stage distances differ from the ones used in the live gps data;
 // these corrections are applied with existence guards in api.js.

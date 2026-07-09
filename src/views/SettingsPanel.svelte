@@ -3,7 +3,7 @@
   import { race } from '../lib/state/race.svelte.js';
   import { discovery, discoveryDump } from '../lib/state/discovery.svelte.js';
   import { MARK_COLORS, colorOf } from '../lib/colors.js';
-  import { YEAR, BASE_URL, DATA_REPO_URL } from '../lib/config.js';
+  import { YEAR, BASE_URL } from '../lib/config.js';
 
   import { RACE_KEY } from '../lib/config.js';
   import { parseBibList, bibsForColor, syncColorList, exportMarks, importMarks } from '../lib/marks.js';
@@ -183,10 +183,9 @@
   <section>
     <h3>Replay</h3>
     <p class="hint">
-      Base URL of the public data repo that hosts stage recordings. Leave blank to use
-      the default. Recordings download on demand and are cached locally.
+      Past stages download on demand (⟲ in the toolbar) and are cached here so they
+      don't re-download. Delete any you no longer need to free space.
     </p>
-    <input type="text" class="wide" placeholder={DATA_REPO_URL} bind:value={settings.dataRepoUrl} />
     {#if cachedRecs.length}
       <p class="hint">Cached recordings:</p>
       {#each cachedRecs as rec (rec.id)}
