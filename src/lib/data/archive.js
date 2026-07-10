@@ -127,7 +127,12 @@ export async function getCached(id) {
 export async function putCached(entry, blob) {
   const d = await openDb();
   const tx = d.transaction('recordings', 'readwrite');
-  tx.objectStore('recordings').put({ id: entry.id, blob, entry, cachedAt: Date.now() });
+  // `entry` may arrive as a Svelte 5 $state proxy (it comes from a reactive
+  // `entries` array in ReplayBar); structured-clone can't clone a Proxy, so IDB
+  // put() throws DataCloneError. Round-trip to a plain object first — entry is
+  // pure JSON data, so this is lossless.
+  const plain = JSON.parse(JSON.stringify(entry));
+  tx.objectStore('recordings').put({ id: plain.id, blob, entry: plain, cachedAt: Date.now() });
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve(undefined);
     tx.onerror = () => reject(tx.error);
