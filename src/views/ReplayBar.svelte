@@ -8,9 +8,11 @@
     playRecordingBlob,
     replayPlay,
     replayPause,
+    replayTogglePlay,
     replaySeek,
     replaySetSpeed,
     exitReplay,
+    isReplaying,
   } from '../lib/state/replaySession.svelte.js';
 
   const SPEEDS = [1, 5, 10, 30, 60];
@@ -25,6 +27,19 @@
 
   const baseUrl = DATA_REPO_URL;
   const kmToGo = $derived(race.tick?.riders[0]?.kmToFinish);
+
+  // While the user drags the scrubber, suspend playback so the running loop's progress
+  // updates don't fight the slider's value (which would make the thumb jump between the
+  // playback position and the drag target). Resume afterwards if it was playing.
+  let resumeAfterScrub = false;
+  function scrubStart() {
+    resumeAfterScrub = isReplaying();
+    if (resumeAfterScrub) replayPause();
+  }
+  function scrubEnd() {
+    if (resumeAfterScrub) replayPlay();
+    resumeAfterScrub = false;
+  }
 
   async function loadIndex() {
     loadError = '';
@@ -83,7 +98,7 @@
   <!-- transport controls for the active replay -->
   <div class="replaybar">
     <span class="badge">REPLAY</span>
-    <button class="ctrl" onclick={() => (ui.replay.playing ? replayPause() : replayPlay())}>
+    <button class="ctrl" onclick={replayTogglePlay}>
       {ui.replay.playing ? '⏸' : '⏵'}
     </button>
 
@@ -99,6 +114,9 @@
       min="0"
       max={Math.max(0, ui.replay.total - 1)}
       value={Math.max(0, ui.replay.i)}
+      onpointerdown={scrubStart}
+      onpointerup={scrubEnd}
+      onpointercancel={scrubEnd}
       oninput={(e) => replaySeek(+e.currentTarget.value)}
     />
 

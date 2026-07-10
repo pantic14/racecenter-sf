@@ -31,9 +31,9 @@ function ridersByBib(riders) {
 }
 
 /**
- * @param {{id: string, ticks: import('../data/archive.js').ReplayTick[], rest: any}} rec
+ * @param {{id: string, ticks: import('../data/archive.js').ReplayTick[], rest: any, date?: string}} rec
  */
-function enter({ id, ticks, rest }) {
+function enter({ id, ticks, rest, date }) {
   // Back up the REAL live REST only on the first entry; loading another recording
   // while already replaying must not overwrite it with the previous one's snapshot.
   if (!ui.replay) {
@@ -49,8 +49,10 @@ function enter({ id, ticks, rest }) {
   // stage's own, correct forever.
   if (rest?.riders) race.riders = ridersByBib(rest.riders);
   if (rest?.teams) race.teams = rest.teams;
-  const stageDate = Object.keys(rest?.stages ?? {})[0];
-  race.stage = stageDate ? rest.stages[stageDate] : null;
+  // rest.stages holds the whole season keyed by date, so pick THIS recording's stage
+  // by its date; fall back to the first key for single-stage synthetic fixtures.
+  const stages = rest?.stages ?? {};
+  race.stage = stages[date] ?? stages[Object.keys(stages)[0]] ?? null;
 
   replayer = createReplayer({
     ticks,
@@ -65,8 +67,8 @@ function enter({ id, ticks, rest }) {
 
 /** Load a recording from a local .json.gz File/Blob (dev fallback). @param {Blob} blob @param {string} [id] */
 export async function playRecordingBlob(blob, id = 'local') {
-  const { ticks, rest } = await parseRecording(blob);
-  enter({ id, ticks, rest });
+  const { ticks, rest, meta } = await parseRecording(blob);
+  enter({ id, ticks, rest, date: meta?.date });
 }
 
 /**
@@ -77,7 +79,7 @@ export async function playRecordingBlob(blob, id = 'local') {
  */
 export async function playRecordingEntry(baseUrl, entry, onProgress) {
   const { ticks, rest } = await fetchRecording(baseUrl, entry, onProgress);
-  enter({ id: entry.id, ticks, rest });
+  enter({ id: entry.id, ticks, rest, date: entry.date });
 }
 
 export function replayPlay() {
@@ -86,6 +88,18 @@ export function replayPlay() {
 
 export function replayPause() {
   replayer?.pause();
+}
+
+/** Toggle play/pause off the replayer's REAL state (ui.replay.playing is only a mirror). */
+export function replayTogglePlay() {
+  if (!replayer) return;
+  if (replayer.playing) replayer.pause();
+  else replayer.play();
+}
+
+/** True while a replayer exists and is actively playing (used by the scrubber). */
+export function isReplaying() {
+  return !!replayer?.playing;
 }
 
 /** @param {number} i absolute tick index */
