@@ -13,6 +13,10 @@
  * @property {number|null} [windKph]  wind speed from the feed (leader), km/h
  * @property {number|null} [gradient]  road grade from the feed (leader), %
  * @property {import('./wind.js').RelativeWind|null} [relWind]  wind relative to travel (from feed course + windDir)
+ * @property {number|null} [vamInst]  best rider's instantaneous VAM, m/h
+ * @property {number|null} [vam500]  best rider's VAM over the trailing 500 m, m/h
+ * @property {number|null} [vam1k]  best rider's VAM over the trailing 1 km, m/h
+ * @property {number|null} [vam5k]  best rider's VAM over the trailing 5 km, m/h
  */
 
 /**

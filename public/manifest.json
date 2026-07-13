@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Racecenter Peloton",
   "description": "Live Tour de France peloton tracker: rider groups, marking, stage profile and alerts.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",

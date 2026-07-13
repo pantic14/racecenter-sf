@@ -2,10 +2,28 @@
   import { race } from '../lib/state/race.svelte.js';
   import { settings } from '../lib/state/settings.svelte.js';
   import { ui } from '../lib/state/ui.svelte.js';
-  import { MARK_COLORS, colorOf } from '../lib/colors.js';
+  import { MARK_COLORS, colorOf, vamColor } from '../lib/colors.js';
 
   const bib = $derived(ui.selectedRider);
   const info = $derived(bib != null ? race.riders[bib] : null);
+
+  // The live tick (with the attached vam* fields) lives inside race.groups,
+  // reassigned every tick — the static race.riders map has no telemetry.
+  const tick = $derived.by(() => {
+    if (bib == null) return null;
+    for (const g of race.groups) {
+      for (const r of g.riders) if (r.bib === bib) return r;
+    }
+    return null;
+  });
+
+  const vams = $derived([
+    { lbl: 'inst', v: tick?.vamInst },
+    { lbl: '500m', v: tick?.vam500 },
+    { lbl: '1km', v: tick?.vam1k },
+    { lbl: '5km', v: tick?.vam5k },
+  ]);
+  const hasVam = $derived(vams.some((x) => x.v != null));
 
   function setMark(colorId) {
     if (bib == null) return;
@@ -25,6 +43,23 @@
           <div class="meta">bib {bib}{info?.team_name ? ` · ${info.team_name}` : ''}</div>
         </div>
       </div>
+      {#if tick}
+        <div class="vam" title="VAM m/h over the trailing road distance">
+          <span class="vam-title">VAM</span>
+          {#if hasVam}
+            {#each vams as x (x.lbl)}
+              <span class="vam-cell">
+                <span class="vam-lbl">{x.lbl}</span>
+                <span class="vam-val" style={x.v != null ? `color: ${vamColor(x.v)}` : ''}>
+                  {x.v == null ? '—' : x.v}
+                </span>
+              </span>
+            {/each}
+          {:else}
+            <span class="vam-hint">solo en ascenso</span>
+          {/if}
+        </div>
+      {/if}
       <div class="palette">
         {#each MARK_COLORS as c (c.id)}
           <button
@@ -74,6 +109,39 @@
   .meta {
     font-size: 12px;
     color: #777;
+  }
+  .vam {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0 10px;
+    border-top: 1px solid #eee;
+    font-variant-numeric: tabular-nums;
+  }
+  .vam-title {
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: #999;
+  }
+  .vam-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.15;
+  }
+  .vam-lbl {
+    font-size: 10px;
+    color: #999;
+  }
+  .vam-val {
+    font-weight: 700;
+    font-size: 14px;
+    color: #555;
+  }
+  .vam-hint {
+    font-size: 12px;
+    color: #999;
   }
   .palette {
     display: flex;

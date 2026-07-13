@@ -73,6 +73,32 @@ export function altitudeAt(points, kmDone) {
   return span > 0 ? a.alt + ((b.alt - a.alt) * (kmDone - a.kmDone)) / span : a.alt;
 }
 
+/**
+ * Interpolated altitude at a kmToGo (km-to-finish) position. Points are sorted
+ * by kmDone ascending, so kmToGo runs descending; the live/replay tick reports
+ * kmToFinish, not kmDone, so VAM uses this rather than altitudeAt().
+ * @param {RoutePoint[]} points
+ * @param {number} kmToGo
+ */
+export function altitudeAtKmToGo(points, kmToGo) {
+  if (!points.length) return 0;
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (kmToGo >= first.kmToGo) return first.alt;
+  if (kmToGo <= last.kmToGo) return last.alt;
+  let lo = 0;
+  let hi = points.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid].kmToGo >= kmToGo) lo = mid;
+    else hi = mid;
+  }
+  const a = points[lo]; // higher kmToGo (further from finish)
+  const b = points[hi]; // lower kmToGo
+  const span = a.kmToGo - b.kmToGo;
+  return span > 0 ? a.alt + ((b.alt - a.alt) * (a.kmToGo - kmToGo)) / span : a.alt;
+}
+
 const WINDOW = 300; // ± points searched around the previous match (~±9 km)
 
 /**

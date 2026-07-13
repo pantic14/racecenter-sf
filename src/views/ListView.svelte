@@ -1,8 +1,11 @@
 <script>
   import { race } from '../lib/state/race.svelte.js';
   import { prettyTime } from '../lib/util.js';
-  import { gradeColor } from '../lib/colors.js';
+  import { gradeColor, vamColor } from '../lib/colors.js';
   import RiderChip from './RiderChip.svelte';
+
+  /** VAM value or an em dash when unavailable. @param {number|null|undefined} v */
+  const fmtVam = (v) => (v == null ? '—' : v);
 
   const shown = $derived(race.paused ? race.frozenGroups : race.groups);
   const pelotonId = $derived(
@@ -56,7 +59,16 @@
         {#if group.gradient != null}
           <span class="ggrad" style="color: {gradeColor(group.gradient)}" title="road grade">
             {group.gradient > 0 ? '↗' : group.gradient < 0 ? '↘' : '→'}
-            {group.gradient > 0 ? '+' : ''}{group.gradient}%
+            {group.gradient > 0 ? '+' : ''}{Math.round(group.gradient * 10) / 10}%
+          </span>
+        {/if}
+        {#if group.vamInst != null && group.vamInst > 0}
+          <span class="gvam" title="VAM m/h (best rider) — inst · 500m · 1km · 5km">
+            <span class="vlbl">VAM</span>
+            <span style="color: {vamColor(group.vamInst)}">{group.vamInst}</span>
+            <span class="vsep">·</span>{fmtVam(group.vam500)}
+            <span class="vsep">·</span>{fmtVam(group.vam1k)}
+            <span class="vsep">·</span>{fmtVam(group.vam5k)}
           </span>
         {/if}
       </header>
@@ -148,6 +160,23 @@
     gap: 2px;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
+  }
+  .gvam {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #555;
+  }
+  .gvam .vlbl {
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    color: #999;
+  }
+  .gvam .vsep {
+    color: #bbb;
   }
   .chips {
     display: flex;

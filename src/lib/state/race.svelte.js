@@ -2,10 +2,12 @@
 import { groupRiders } from '../domain/grouping.js';
 import { trackGroups } from '../domain/groupTracking.js';
 import { createTrendTracker } from '../domain/trends.js';
+import { createVamTracker } from '../domain/vam.js';
 import { classifyWind } from '../domain/wind.js';
 import { settings } from './settings.svelte.js';
 
 let trendTracker = createTrendTracker();
+let vamTracker = createVamTracker();
 // Wind, heading and temperature all come from the live feed (Course, RiderWindDir,
 // kphWind, degC) — no external weather API.
 
@@ -65,10 +67,27 @@ export function getRoute() {
   return routePoints;
 }
 
+/**
+ * Highest VAM value across a group's riders for one window key (null if none).
+ * @param {import('../data/tick.js').RiderTick[]} riders
+ * @param {'vamInst'|'vam500'|'vam1k'|'vam5k'} key
+ * @returns {number|null}
+ */
+function maxVam(riders, key) {
+  let m = null;
+  for (const r of riders) {
+    const v = r[key];
+    if (Number.isFinite(v) && (m === null || v > m)) m = v;
+  }
+  return m;
+}
+
 /** @param {import('../data/tick.js').Tick} tick */
 export function applyTick(tick) {
   race.tick = tick;
   const groups = trackGroups(race.groups, groupRiders(tick.riders, settings.minGap));
+  // attaches vam* to each rider (shared with the group objects below)
+  vamTracker.update(tick, getRoute());
   for (const group of groups) {
     const lead = group.riders[0];
     group.tempC = Number.isFinite(lead?.tempC) ? lead.tempC : null;
@@ -78,6 +97,11 @@ export function applyTick(tick) {
       lead && Number.isFinite(lead.windDir) && Number.isFinite(lead.course)
         ? classifyWind(lead.windDir, lead.course)
         : null;
+    // group VAM = its best climber (max over current members) per window
+    group.vamInst = maxVam(group.riders, 'vamInst');
+    group.vam500 = maxVam(group.riders, 'vam500');
+    group.vam1k = maxVam(group.riders, 'vam1k');
+    group.vam5k = maxVam(group.riders, 'vam5k');
   }
   race.groups = groups;
   race.trends = trendTracker.update(race.groups, tick.timeStamp);
@@ -97,6 +121,7 @@ export function resetRace() {
   race.frozenGroups = [];
   race.paused = false;
   trendTracker = createTrendTracker();
+  vamTracker = createVamTracker();
 }
 
 export function togglePause() {

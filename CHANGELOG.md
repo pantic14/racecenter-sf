@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.4
+
+### Added
+- **VAM (average climbing speed)** — per-group and per-rider vertical ascent speed in
+  m/h, shown in the group rows and the rider card. Four figures: an instantaneous value
+  (from the feed's speed × grade) plus rolling windows over the last 500 m, 1 km and 5 km
+  of road. Vertical gain is read from the clean stage profile, falling back to the feed's
+  GPS altitude when no profile is loaded. History is kept per rider, so the values stay
+  correct as groups split and merge; a group shows its best climber's VAM, and values are
+  hidden on flat/descent. Works in both live and replay.
+
+### Fixed
+- **Replay stalling on feed gaps** — fast-forward speeds (×5–×60) no longer freeze for
+  minutes on gaps in a recording (feed drops, neutralized zones); the inter-tick wait is
+  capped in those modes only. ×1 still plays gaps faithfully so the replay stays aligned
+  with the live TV broadcast.
+- **Gradient with long decimals** — road grade from the backend-sourced stages showed
+  many decimal places in the group row; it's now rounded to one decimal.
+
 ## 0.1.3
 
 ### Fixed

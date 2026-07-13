@@ -16,6 +16,13 @@
  *   cancel?: (h: any) => void,
  * }} opts
  */
+// Recordings from the field carry gaps (feed drops, neutralized zones, recorder
+// restarts) whose dt is minutes long. At ×1 these are played faithfully: the
+// replay is meant to run alongside the live TV broadcast, and skipping a gap
+// would drift the replay ahead of the feed. Only the fast-forward speeds cap the
+// gap (to this max) so they don't stall for minutes on a multi-minute hole.
+const MAX_GAP_MS = 5000;
+
 export function createReplayer({
   ticks,
   onTick,
@@ -49,7 +56,8 @@ export function createReplayer({
       onEnd?.();
       return;
     }
-    const dt = ticks[i + 1].dt || 0;
+    const raw = ticks[i + 1].dt || 0;
+    const dt = speed > 1 ? Math.min(raw, MAX_GAP_MS) : raw; // ×1 stays TV-faithful
     timer = schedule(() => {
       show(i + 1);
       loop();

@@ -15,6 +15,10 @@
  * @property {number} windDir  absolute wind bearing in degrees, NaN if absent
  * @property {number} tempC    air temperature at the rider, °C, NaN if absent
  * @property {number} gradient road grade at the rider, %, NaN if absent
+ * @property {number|null} [vamInst] instantaneous VAM from feed speed×grade, m/h (null unless climbing)
+ * @property {number|null} [vam500] VAM over the trailing 500 m of road, m/h
+ * @property {number|null} [vam1k] VAM over the trailing 1 km of road, m/h
+ * @property {number|null} [vam5k] VAM over the trailing 5 km of road, m/h
  */
 
 /**
