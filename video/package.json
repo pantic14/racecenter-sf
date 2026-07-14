@@ -1,0 +1,30 @@
+{
+  "name": "racecenter-promo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion promo teaser for the Racecenter Chrome extension",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render Promo out/racecenter-promo.mp4",
+    "render:short": "remotion render PromoVertical out/racecenter-short-9x16.mp4",
+    "render:hook": "remotion render PromoShortHook out/racecenter-short-hook-music.mp4",
+    "render:commentators-es": "remotion render CommentatorsES out/racecenter-commentators-es.mp4",
+    "render:commentators-en": "remotion render CommentatorsEN out/racecenter-commentators-en.mp4",
+    "render:webm": "remotion render Promo out/racecenter-promo.webm --codec=vp8",
+    "music": "node tools/make-music.mjs",
+    "music:soft": "node tools/make-music.mjs --soft --out public/music-soft.wav --dur 54",
+    "still": "remotion still Promo out/poster.png --frame=120",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.489",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "4.0.489"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}
