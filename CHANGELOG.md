@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.1.5
+
+### Added
+- **Climbs tab** — every categorised climb of the stage, with its foot, length, average
+  gradient and ascent, plus a classification of who has climbed it fastest: ascent time,
+  gap to the best, VAM and average speed. Everything comes from the race's own official
+  climb data, so names, categories and distances are the ones on the roadbook. Summit
+  finishes are included. In a replay every climb is filled in from the moment the stage
+  loads; live, riders are timed as they climb. Note that the feed stops following most of
+  the field a few kilometres from the line, so a summit finish times only the riders it
+  was still tracking.
+
+### Fixed
+- **VAM over 500 m / 1 km / 5 km never appeared live** — the windowed VAM needs altitude,
+  and the live feed turns out to never send it (`mAlt` is absent from every rider of every
+  live frame). It only ever worked on stages imported from ASO's official files, which
+  reconstruct altitude themselves. The stage's official altimetry (`trace.json`) is now
+  loaded for the live stage too, so all four VAM figures work everywhere; recordings carry
+  their own copy so replays stay self-contained. No manual per-stage setup any more.
+- **Windowed VAM showing impossible values** — a feed resync can teleport a rider a
+  kilometre in one 6 s frame, which produced VAMs up to 32000 m/h. Such windows are now
+  rejected, and the 500 m / 1 km / 5 km figures are held to a ceiling no one can sustain.
+  The instantaneous VAM is untouched: it is a momentary speed × grade reading, and riders
+  attacking a steep ramp really do spike it.
+- **Windowed VAM hidden whenever the instantaneous one was missing** — the group row gated
+  all four figures on the instantaneous VAM, which drops out on every flat metre; the row
+  now shows whenever any figure is available.
+- **Stage 9 (2026-07-12) length wrong** — listed as 185.48 km instead of 154.6 km.
+
 ## 0.1.4
 
 ### Added

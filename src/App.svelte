@@ -1,15 +1,16 @@
 <script>
   import { onMount } from 'svelte';
-  import { race, applyTick, setSseStatus, pushError, setRoute } from './lib/state/race.svelte.js';
+  import { race, applyTick, setSseStatus, pushError, setRoute, setClimbs } from './lib/state/race.svelte.js';
   import { settings, settingsMeta, initSettings, persistSettings } from './lib/state/settings.svelte.js';
   import { ui } from './lib/state/ui.svelte.js';
-  import { registerReplayHooks } from './lib/state/replaySession.svelte.js';
+  import { registerReplayHooks, getReplayTrace, getReplayCheckpoints, getReplayTicks } from './lib/state/replaySession.svelte.js';
   import { recordRawUpdate } from './lib/state/discovery.svelte.js';
   import { createLiveSource } from './lib/data/sse.js';
-  import { fetchRiders, fetchTeams, fetchStages, fetchProfileCsv } from './lib/data/api.js';
+  import { fetchRiders, fetchTeams, fetchStages, fetchProfileCsv, fetchTrace, fetchCheckpoints } from './lib/data/api.js';
   import { BASE_URL, TELEMETRY_BIND } from './lib/config.js';
   import { loadMockEventSource } from './lib/data/mock.js';
-  import { parseRouteCsv } from './lib/domain/route.js';
+  import { parseRouteCsv, parseTraceJson } from './lib/domain/route.js';
+  import { extractClimbs } from './lib/domain/climbs.js';
   import { logGroups } from './lib/storage/tickLog.js';
   import { beep, playPattern, PATTERNS } from './lib/alerts/sound.js';
   import { createAlertEngine } from './lib/alerts/engine.js';
@@ -18,6 +19,7 @@
   import ReplayBar from './views/ReplayBar.svelte';
   import ListView from './views/ListView.svelte';
   import ProfileView from './views/ProfileView.svelte';
+  import ClimbsView from './views/ClimbsView.svelte';
   import SettingsPanel from './views/SettingsPanel.svelte';
   import HistoryView from './views/HistoryView.svelte';
   import RiderCard from './views/RiderCard.svelte';
@@ -78,30 +80,77 @@
     return () => stopLive();
   });
 
-  // load the stage's altimetry when a profile URL is known
-  // (in mock mode the synthetic profile is used so the view can be developed)
+  // Sole owner of the stage's altimetry and climbs. Everything comes from ASO's trace —
+  // embedded in the recording when replaying (so a replay needs no network and can't rot),
+  // otherwise fetched for the stage on screen. A profile CSV configured by hand in Settings
+  // overrides the ROUTE only, being denser (~1600 points vs ~750); it carries no points of
+  // interest, so the climbs still come from the trace either way.
+  // Nothing else may call setRoute/setClimbs: this reruns on stage/replay/settings changes,
+  // so a second writer would race it and win only by accident.
   const stageDate = $derived(race.stage?.date?.substring(0, 10) ?? '');
+  const stageNo = $derived(race.stage?.stage ?? null);
+  const replayId = $derived(ui.replay?.id ?? null);
   const profileUrl = $derived(
     mockFixture ? 'fixtures/profile-synthetic.csv' : (settings.profileUrls[stageDate] || ''),
   );
   $effect(() => {
-    const url = profileUrl;
     if (!settingsMeta.loaded) return;
-    if (!url) {
-      setRoute(null);
-      return;
-    }
+    const url = profileUrl;
+    const stage = stageNo;
+    replayId; // re-resolve when a replay is entered, swapped or left
     let cancelled = false;
-    fetchProfileCsv(url)
-      .then((text) => {
-        if (cancelled) return;
-        const points = parseRouteCsv(text);
-        setRoute(points);
-        if (!points.length) pushError('profile', `profile CSV parsed to 0 points (${url})`);
-      })
-      .catch((e) => {
-        if (!cancelled) pushError('profile', e.message);
-      });
+
+    (async () => {
+      // The synthetic fixture is a bare profile with no stage behind it; fetching the real
+      // trace for whatever stage the calendar says is today would be nonsense in mock mode.
+      const live = !mockFixture && stage != null;
+      let trace = mockFixture ? null : getReplayTrace();
+      if (!trace && live) {
+        try {
+          trace = await fetchTrace(stage);
+        } catch (e) {
+          pushError('profile', `stage ${stage} altimetry: ${e.message}`);
+        }
+      }
+
+      // Climbs are ASO's own, never derived: name, length, gradient and category all come
+      // stated. A recording carries its own copy, because this endpoint is per-season and
+      // will not answer for 2026 forever.
+      let checkpoints = mockFixture ? null : getReplayCheckpoints();
+      if (!checkpoints && live) {
+        try {
+          checkpoints = await fetchCheckpoints(stage);
+        } catch (e) {
+          pushError('climbs', `stage ${stage} checkpoints: ${e.message}`);
+        }
+      }
+      if (cancelled) return;
+      // The replay's ticks prime the ascent times, so a loaded stage shows its climbs
+      // already ridden rather than filling in as it plays.
+      setClimbs(checkpoints ? extractClimbs(checkpoints) : [], getReplayTicks());
+
+      if (url) {
+        // Anything wrong with the CSV (unreachable, or parsed to nothing) falls through to
+        // the trace rather than leaving the stage with no altitude at all.
+        try {
+          const points = parseRouteCsv(await fetchProfileCsv(url));
+          if (cancelled) return;
+          if (points.length) {
+            setRoute(points);
+            return;
+          }
+          pushError('profile', `profile CSV parsed to 0 points (${url})`);
+        } catch (e) {
+          if (cancelled) return;
+          pushError('profile', e.message);
+        }
+      }
+
+      const points = trace ? parseTraceJson(trace) : [];
+      if (trace && !points.length) pushError('profile', `stage ${stage} trace parsed to 0 points`);
+      setRoute(points);
+    })();
+
     return () => {
       cancelled = true;
     };
@@ -179,6 +228,8 @@
   <SettingsPanel />
 {:else if ui.tab === 'profile'}
   <ProfileView />
+{:else if ui.tab === 'climbs'}
+  <ClimbsView />
 {:else if ui.tab === 'history'}
   <HistoryView />
 {:else}

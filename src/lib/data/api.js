@@ -1,5 +1,5 @@
 // @ts-check
-import { BASE_URL, YEAR, STAGE_LENGTH_OVERRIDES, raceToday } from '../config.js';
+import { BASE_URL, YEAR, STAGE_LENGTH_OVERRIDES, raceToday, traceUrl } from '../config.js';
 
 async function fetchJson(path) {
   const res = await fetch(BASE_URL + path);
@@ -50,6 +50,31 @@ export async function fetchStages() {
   if (today > last) today = last;
 
   return { stages, today, currentStage: stages[today] };
+}
+
+/**
+ * A stage's checkpoints: ASO's own points of interest along the route. Carries the
+ * categorised climbs (name, length, gradient, category) and per-point weather — including
+ * rain, which the telemetry feed has never had. Available for every stage of the season,
+ * past and future, so no sniffing or guessing is needed.
+ * @param {number} stage stage number
+ */
+export async function fetchCheckpoints(stage) {
+  return fetchJson(`/api/checkpoint-${YEAR}-${stage}`);
+}
+
+/**
+ * A stage's official altimetry from ASO's bucket — the altitude source for a live stage,
+ * since the telemetry feed carries no mAlt. Unlike the profile CSV this needs no
+ * per-stage URL sniffing and is published before the stage runs. Open CORS, so it goes
+ * direct in dev too (no Vite proxy needed).
+ * @param {number} stage stage number
+ */
+export async function fetchTrace(stage) {
+  const url = traceUrl(stage);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
+  return res.json();
 }
 
 /** @param {string} url absolute or site-relative profile CSV url */

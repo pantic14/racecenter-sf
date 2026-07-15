@@ -43,6 +43,7 @@
   <nav>
     <button class:active={ui.tab === 'list'} onclick={() => (ui.tab = 'list')}>Peloton</button>
     <button class:active={ui.tab === 'profile'} onclick={() => (ui.tab = 'profile')}>Profile</button>
+    <button class:active={ui.tab === 'climbs'} onclick={() => (ui.tab = 'climbs')}>Climbs</button>
     <button class:active={ui.tab === 'history'} onclick={() => (ui.tab = 'history')}>Gaps</button>
     <button class:active={ui.tab === 'settings'} onclick={() => (ui.tab = 'settings')}>Settings</button>
     <button class="pause" onclick={togglePause} title={race.paused ? 'resume' : 'pause the view (data keeps flowing)'}>

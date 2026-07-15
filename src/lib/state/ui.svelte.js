@@ -1,7 +1,7 @@
 // @ts-check
 
 export const ui = $state({
-  /** 'list' | 'settings' */
+  /** 'list' | 'profile' | 'climbs' | 'history' | 'settings' */
   tab: 'list',
   /** team _id whose riders are highlighted; '' = none */
   selectedTeam: '',

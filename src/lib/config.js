@@ -8,6 +8,16 @@ export const YEAR = new Date().getUTCFullYear();
 export const RACE_KEY = `racecenter.letour.fr-${YEAR}`;
 export const TELEMETRY_BIND = `telemetryCompetitor-${YEAR}`;
 
+// ASO's public asset bucket (the one dansmacourse.letour.fr reads). Serves each stage's
+// official altimetry — our only altitude source for a live stage, since the telemetry feed
+// never sends mAlt. Open CORS (`access-control-allow-origin: *`), so it needs no
+// host_permissions, and each stage's trace is published days BEFORE the stage runs.
+// The bucket hash is an ASO build env var: undocumented, may rotate per season.
+export const BUCKET_BASE = 'https://storage.googleapis.com/tdf-prod-assets-7d6b412378cb7194';
+
+/** @param {number} stage stage number (not the date) */
+export const traceUrl = (stage) => `${BUCKET_BASE}/tdf/${YEAR}/stage-${stage}/trace.json`;
+
 // Public data repo hosting stage recordings for replay (M6), baked in — users only
 // pick from the available recordings, they never configure a URL. raw.githubusercontent
 // serves index.json + the recordings with open CORS. See doc/replay-plan.md.
@@ -24,7 +34,10 @@ export const STAGE_LENGTH_OVERRIDES = {
   '2026-07-09': 186.17,
   '2026-07-10': 175.06,
   '2026-07-11': 180.37,
-  '2026-07-12': 185.48,
+  // 154.6, not 185.48 (a straight typo) and not the 159.42 the stage's trace.json claims:
+  // every other stage's official distance agrees with its trace to 2 dp, but stage 9's
+  // trace holds the neutral-inclusive length. The feed itself tops out at 154.61.
+  '2026-07-12': 154.6,
   '2026-07-14': 166.59,
   '2026-07-15': 161.29,
   '2026-07-16': 179.03,

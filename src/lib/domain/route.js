@@ -38,6 +38,80 @@ export function parseRouteCsv(text) {
 }
 
 /**
+ * Parse ASO's `stage-<n>/trace.json` (the official altimetry: `routePoints[{lat,lon,ele}]`
+ * plus `pointsOfInterest`) into the same RoutePoint[] a profile CSV yields — so it can be
+ * an altitude source anywhere a route is expected. Unlike the CSV it needs no per-stage
+ * URL sniffing, and it is published before the stage.
+ *
+ * Two traps, both verified against all 19 traces of 2026:
+ *  - `routePoints` starts at the NEUTRALISED start, several km before km 0, while
+ *    `totalDistance` counts from km 0. Their difference is the neutral zone (3-12.6 km).
+ *  - Summing haversine over the points overshoots the real road distance by 3-7 km: GPS
+ *    zigzag inflates it. So the raw geometry is a shape, not a scale.
+ * The POIs resolve both: their `distanceRemaining` is exactly the feed's kmToFinish scale,
+ * so anchoring the geometry on the km-0 POI puts every point on the feed's scale. Points
+ * in the neutral zone keep kmToGo > the stage length, which is what the feed reports there.
+ * @param {any} trace  parsed trace.json
+ * @returns {RoutePoint[]}
+ */
+export function parseTraceJson(trace) {
+  const pts = trace?.routePoints;
+  if (!Array.isArray(pts) || pts.length < 2) return [];
+
+  /** cumulative geometric distance (km) from the polyline's first point */
+  const dist = [0];
+  for (let i = 1; i < pts.length; i++) {
+    dist.push(dist[i - 1] + haversineDistance(pts[i - 1].lat, pts[i - 1].lon, pts[i].lat, pts[i].lon));
+  }
+  const geoTotal = dist[dist.length - 1];
+  if (!(geoTotal > 0)) return [];
+
+  // Anchor: the km-0 POI ('#002…'). Its distanceRemaining is the official race distance —
+  // trust it over `totalDistance`, which on stage 9 of 2026 holds the neutral-inclusive
+  // length instead and would stretch the whole stage by 3%.
+  const km0 = (trace.pointsOfInterest ?? []).find((p) => /^#002/.test(p?.label ?? ''));
+  let lengthKm = Number(km0?.distanceRemaining);
+  let geoRacing = geoTotal;
+  if (Number.isFinite(lengthKm) && lengthKm > 0) {
+    // Only the opening quarter is searched: the neutral zone never exceeds ~10% of a stage,
+    // and a circuit stage (Barcelona, the Champs-Élysées finale) rides the same coordinates
+    // several times — an unbounded search happily anchors km 0 on a closing lap.
+    geoRacing = geoTotal - dist[nearestIndex(pts, km0.lat, km0.lon, Math.ceil(pts.length / 4))];
+  } else {
+    // No POI. `totalDistance` is the next best scale, and bare geometry the last resort.
+    lengthKm = Number(trace.totalDistance);
+    if (!Number.isFinite(lengthKm) || lengthKm <= 0) lengthKm = geoTotal;
+  }
+  if (!(geoRacing > 0)) return [];
+
+  const scale = lengthKm / geoRacing;
+  return pts.map((p, i) => {
+    const kmToGo = (geoTotal - dist[i]) * scale;
+    return { lat: p.lat, lon: p.lon, alt: p.ele, kmDone: lengthKm - kmToGo, kmToGo };
+  });
+}
+
+/**
+ * Index of the route point closest to a lat/lon, searching pts[0..limit). Linear — only
+ * used to resolve one POI per stage, so the snapper's index cache would be pure overhead.
+ * @param {{lat: number, lon: number}[]} pts
+ * @param {number} lat @param {number} lon
+ * @param {number} [limit] exclusive upper bound on the search
+ */
+function nearestIndex(pts, lat, lon, limit = pts.length) {
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < Math.min(limit, pts.length); i++) {
+    const d = haversineDistance(lat, lon, pts[i].lat, pts[i].lon);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
  * @param {number} lat1 @param {number} lon1 @param {number} lat2 @param {number} lon2
  * @returns {number} distance in km
  */

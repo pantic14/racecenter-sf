@@ -20,6 +20,39 @@ export function registerReplayHooks(h) {
 let replayer = null;
 /** @type {{riders: any, teams: any, stage: any}|null} */
 let liveBackup = null;
+/**
+ * The replayed recording's embedded altimetry (raw trace.json). Kept out of $state like
+ * the route itself — it is a thousand points nothing needs to react to individually. App
+ * owns route resolution and reads this through getReplayTrace(); `ui.replay.id` is what
+ * tells it to look again.
+ * @type {any|null}
+ */
+let replayTrace = null;
+
+/** Raw trace.json of the recording being replayed, or null when not replaying / not embedded. */
+export function getReplayTrace() {
+  return replayTrace;
+}
+
+/** @type {any|null} the replayed recording's embedded checkpoints (climbs + weather) */
+let replayCheckpoints = null;
+
+/** Raw checkpoint payload of the recording being replayed, or null when absent. */
+export function getReplayCheckpoints() {
+  return replayCheckpoints;
+}
+
+/** @type {import('../data/archive.js').ReplayTick[]|null} */
+let replayTicks = null;
+
+/**
+ * Every tick of the recording being replayed, or null when live. A replay knows the whole
+ * stage the moment it loads, which is what lets the climb classifications be filled in up
+ * front instead of accruing as it plays.
+ */
+export function getReplayTicks() {
+  return replayTicks;
+}
 
 /** allCompetitors arrays are stored as-is in recordings; race.riders is keyed by bib. */
 function ridersByBib(riders) {
@@ -53,6 +86,11 @@ function enter({ id, ticks, rest, date }) {
   // by its date; fall back to the first key for single-stage synthetic fixtures.
   const stages = rest?.stages ?? {};
   race.stage = stages[date] ?? stages[Object.keys(stages)[0]] ?? null;
+  // Recordings made before rest.trace existed simply have none — those stages fall back to
+  // the live official trace, same as any other stage without an embedded one.
+  replayTrace = rest?.trace ?? null;
+  replayCheckpoints = rest?.checkpoints ?? null;
+  replayTicks = ticks;
 
   replayer = createReplayer({
     ticks,
@@ -120,6 +158,9 @@ export function replaySetSpeed(s) {
 export function exitReplay() {
   replayer?.stop();
   replayer = null;
+  replayTrace = null;
+  replayCheckpoints = null;
+  replayTicks = null;
   resetRace();
   hooks.resetAlertEngine();
   if (liveBackup) {

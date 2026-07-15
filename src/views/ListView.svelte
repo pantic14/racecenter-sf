@@ -7,6 +7,14 @@
   /** VAM value or an em dash when unavailable. @param {number|null|undefined} v */
   const fmtVam = (v) => (v == null ? '—' : v);
 
+  /**
+   * Any VAM at all worth a row. Gating on vamInst alone hid the windowed values whenever
+   * the instantaneous one was missing — which is exactly when they matter, since it drops
+   * out on every flat metre while the 5 km average is still climbing.
+   * @param {import('../lib/domain/grouping.js').Group} g
+   */
+  const hasVam = (g) => g.vamInst != null || g.vam500 != null || g.vam1k != null || g.vam5k != null;
+
   const shown = $derived(race.paused ? race.frozenGroups : race.groups);
   const pelotonId = $derived(
     shown.length ? shown.reduce((a, b) => (b.size > a.size ? b : a)).id : null,
@@ -62,10 +70,10 @@
             {group.gradient > 0 ? '+' : ''}{Math.round(group.gradient * 10) / 10}%
           </span>
         {/if}
-        {#if group.vamInst != null && group.vamInst > 0}
+        {#if hasVam(group)}
           <span class="gvam" title="VAM m/h (best rider) — inst · 500m · 1km · 5km">
             <span class="vlbl">VAM</span>
-            <span style="color: {vamColor(group.vamInst)}">{group.vamInst}</span>
+            <span style="color: {vamColor(group.vamInst)}">{fmtVam(group.vamInst)}</span>
             <span class="vsep">·</span>{fmtVam(group.vam500)}
             <span class="vsep">·</span>{fmtVam(group.vam1k)}
             <span class="vsep">·</span>{fmtVam(group.vam5k)}
