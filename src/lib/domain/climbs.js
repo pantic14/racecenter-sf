@@ -82,7 +82,7 @@ export function extractClimbs(checkpoints) {
  * here so nothing downstream has to know that.
  * @param {any} checkpoints
  */
-function checkpointList(checkpoints) {
+export function checkpointList(checkpoints) {
   const map = Array.isArray(checkpoints) ? checkpoints[0] : checkpoints;
   if (!map || typeof map !== 'object') return [];
   return Object.values(map)

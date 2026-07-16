@@ -72,6 +72,22 @@
     return paths;
   });
 
+  /**
+   * Weather readings that describe the race. A stale one is dropped outright rather than
+   * dimmed: the finish keeps being read for hours after the winner crosses, and at Nevers
+   * that meant 21 °C on a stage ridden at 33 °C — a plausible-looking number that is simply
+   * about a different afternoon. Better absent than quietly wrong.
+   */
+  const weather = $derived(race.weather.filter((p) => !p.stale));
+
+  function weatherTitle(p) {
+    const bits = [`${p.place} · ${p.desc || p.code}`];
+    if (p.tempC != null) bits.push(`${p.tempC} °C`);
+    if (p.windForce != null) bits.push(`wind ${p.windForce} ${p.windDir}`.trim());
+    bits.push(`read at ${new Date(p.meteoAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    return bits.join(' · ');
+  }
+
   const gridStep = $derived(totalKm > 120 ? 25 : totalKm > 40 ? 10 : 5);
   const gridKms = $derived.by(() => {
     const kms = [];
@@ -120,6 +136,17 @@
     {/each}
     <text x={PAD.left} y={H - 8} class="gridlabel">km to go</text>
     <text x={x(totalKm)} y={H - 8} class="gridlabel finish">🏁 0</text>
+
+    <!-- roadside weather, at the km it was read — rain waiting up the road is the point -->
+    {#each weather as p (p.id)}
+      <g class="wx" class:wet={p.isWet}>
+        <title>{weatherTitle(p)}</title>
+        {#if p.isWet}
+          <line x1={x(p.kmFromStart)} y1={PAD.top - 16} x2={x(p.kmFromStart)} y2={H - PAD.bottom} class="wxline" />
+        {/if}
+        <text x={x(p.kmFromStart)} y={16} class="wxicon">{p.emoji}</text>
+      </g>
+    {/each}
 
     {#if route}
       <path d={areaPath} class="area" />
@@ -230,5 +257,22 @@
     font-size: 12px;
     color: #777;
     padding: 4px 2px;
+  }
+  .wxicon {
+    font-size: 15px;
+    text-anchor: middle;
+    /* the emoji IS the datum; without this the dry ones shout as loud as the rain */
+    opacity: 0.5;
+  }
+  .wx.wet .wxicon {
+    font-size: 18px;
+    opacity: 1;
+  }
+  /* a wet stretch gets a line down to the road, so you see WHERE it is, not just that it is */
+  .wxline {
+    stroke: #1565c0;
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    opacity: 0.55;
   }
 </style>

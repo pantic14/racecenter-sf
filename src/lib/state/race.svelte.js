@@ -47,6 +47,13 @@ export const race = $state({
    * @type {import('../domain/climbs.js').Climb[]}
    */
   climbs: [],
+  /**
+   * Weather along the route, point by point (start, sprint, climbs, finish). A handful per
+   * stage, like the climbs. Live it is refreshed by the feed every 30 min; in a replay it
+   * is the recording's own copy, frozen as the race went past.
+   * @type {import('../domain/weather.js').WeatherPoint[]}
+   */
+  weather: [],
   /** @type {Record<string, 'up'|'down'|null>} gap trend per group id (~30 s window) */
   trends: {},
   /** IndexedDB key for this session's group history ('yyyy-mm-dd' or 'mock:…') */
@@ -110,6 +117,17 @@ export function setClimbs(climbs, ticks = null) {
  */
 export function climbTimes(climb) {
   return climbTracker.times(climb);
+}
+
+/**
+ * Replace the stage's weather. Unlike the climbs this is re-called during a live stage —
+ * the feed re-sends the whole checkpoint payload every 30 min — so it is a plain assignment
+ * with no tracker behind it. Each point already knows whether it describes the race
+ * (`stale`), which is why nothing here needs to know where the riders are.
+ * @param {import('../domain/weather.js').WeatherPoint[]} points
+ */
+export function setWeather(points) {
+  race.weather = points;
 }
 
 /**

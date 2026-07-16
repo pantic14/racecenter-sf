@@ -1,16 +1,17 @@
 <script>
-  import { onMount } from 'svelte';
-  import { race, applyTick, setSseStatus, pushError, setRoute, setClimbs } from './lib/state/race.svelte.js';
+  import { onMount, untrack } from 'svelte';
+  import { race, applyTick, setSseStatus, pushError, setRoute, setClimbs, setWeather } from './lib/state/race.svelte.js';
   import { settings, settingsMeta, initSettings, persistSettings } from './lib/state/settings.svelte.js';
   import { ui } from './lib/state/ui.svelte.js';
   import { registerReplayHooks, getReplayTrace, getReplayCheckpoints, getReplayTicks } from './lib/state/replaySession.svelte.js';
   import { recordRawUpdate } from './lib/state/discovery.svelte.js';
   import { createLiveSource } from './lib/data/sse.js';
   import { fetchRiders, fetchTeams, fetchStages, fetchProfileCsv, fetchTrace, fetchCheckpoints } from './lib/data/api.js';
-  import { BASE_URL, TELEMETRY_BIND } from './lib/config.js';
+  import { BASE_URL, TELEMETRY_BIND, checkpointBind } from './lib/config.js';
   import { loadMockEventSource } from './lib/data/mock.js';
   import { parseRouteCsv, parseTraceJson } from './lib/domain/route.js';
   import { extractClimbs } from './lib/domain/climbs.js';
+  import { extractWeather } from './lib/domain/weather.js';
   import { logGroups } from './lib/storage/tickLog.js';
   import { beep, playPattern, PATTERNS } from './lib/alerts/sound.js';
   import { createAlertEngine } from './lib/alerts/engine.js';
@@ -40,9 +41,18 @@
     liveSource = null;
   }
   function startLive() {
+    // Read at call time, not at mount: this also runs when a replay is left, and the stage
+    // it should follow is whatever the live REST restored by then.
+    const stage = race.stage?.stage ?? null;
     liveSource = createLiveSource({
       url: BASE_URL + '/live-stream',
       bind: TELEMETRY_BIND,
+      // Weather is the one thing the feed keeps changing during a stage, so it rides the
+      // stream instead of the one-shot fetch below. The two writers don't fight: the fetch
+      // seeds the stage, this replaces it every 30 min, and a replay closes the source
+      // altogether, so today's weather can never bleed into a past stage.
+      checkpointBind: stage != null ? checkpointBind(stage) : null,
+      onCheckpoints: (payload) => setWeather(extractWeather(payload)),
       onTick: applyTick,
       onStatus: setSseStatus,
       onRaw: recordRawUpdate,
@@ -125,9 +135,21 @@
         }
       }
       if (cancelled) return;
+      // untrack every state write below. When the recording embeds its trace and
+      // checkpoints (as all recordings now do), this whole body runs synchronously — no
+      // await is hit — so these writes land inside the effect's tracking scope. setRoute's
+      // `routeVersion++` is then a read-modify-write of state the effect depends on, which
+      // is Svelte's textbook infinite loop (effect_update_depth_exceeded). The reference
+      // guard in setRoute can't catch it because parseTraceJson yields a fresh array each
+      // run. untrack severs the self-dependency; the writes still notify the views.
       // The replay's ticks prime the ascent times, so a loaded stage shows its climbs
       // already ridden rather than filling in as it plays.
-      setClimbs(checkpoints ? extractClimbs(checkpoints) : [], getReplayTicks());
+      untrack(() => {
+        setClimbs(checkpoints ? extractClimbs(checkpoints) : [], getReplayTicks());
+        // Same payload, second reading: the checkpoints carry the roadside weather too. Live
+        // this is only the seed — the stream refreshes it from here on.
+        setWeather(checkpoints ? extractWeather(checkpoints) : []);
+      });
 
       if (url) {
         // Anything wrong with the CSV (unreachable, or parsed to nothing) falls through to
@@ -136,7 +158,7 @@
           const points = parseRouteCsv(await fetchProfileCsv(url));
           if (cancelled) return;
           if (points.length) {
-            setRoute(points);
+            untrack(() => setRoute(points));
             return;
           }
           pushError('profile', `profile CSV parsed to 0 points (${url})`);
@@ -148,7 +170,7 @@
 
       const points = trace ? parseTraceJson(trace) : [];
       if (trace && !points.length) pushError('profile', `stage ${stage} trace parsed to 0 points`);
-      setRoute(points);
+      untrack(() => setRoute(points));
     })();
 
     return () => {

@@ -8,6 +8,14 @@ export const YEAR = new Date().getUTCFullYear();
 export const RACE_KEY = `racecenter.letour.fr-${YEAR}`;
 export const TELEMETRY_BIND = `telemetryCompetitor-${YEAR}`;
 
+/**
+ * The live-stream channel carrying a stage's checkpoints — the same payload the REST
+ * endpoint serves, re-sent whenever ASO refreshes the roadside weather. Keyed by stage, not
+ * just season, unlike the telemetry one.
+ * @param {number} stage
+ */
+export const checkpointBind = (stage) => `checkpoint-${YEAR}-${stage}`;
+
 // ASO's public asset bucket (the one dansmacourse.letour.fr reads). Serves each stage's
 // official altimetry — our only altitude source for a live stage, since the telemetry feed
 // never sends mAlt. Open CORS (`access-control-allow-origin: *`), so it needs no

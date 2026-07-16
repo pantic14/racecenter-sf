@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.6
+
+### Fixed
+- **Replays froze the whole extension** — opening any saved stage locked the tab and no
+  button responded. The stage-resolution effect wrote the route, climbs and weather back
+  into reactive state while Svelte was still tracking it, and once recordings started
+  embedding their own altimetry the writes ran synchronously, turning that into an infinite
+  update loop. The writes are now untracked, so replays open normally. (Live was never
+  affected.)
+
+### Added
+- **Weather along the route** — the stage profile now shows the roadside weather at each
+  point ASO reports it (start, intermediate sprint, every climb, finish): a small icon at
+  its kilometre, with rain, storms and snow drawn larger and marked down to the road so you
+  can see wet stretches waiting ahead of the race, not just where the riders are. Hover for
+  the description, temperature, wind and reading time. Readings taken long after the race
+  passed a point — the finish keeps updating for hours — are left off rather than shown
+  wrong. Works live (refreshed as the feed updates it) and in replay (frozen as the race
+  went past).
+
 ## 0.1.5
 
 ### Added
